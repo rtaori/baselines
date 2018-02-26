@@ -12,6 +12,7 @@ from baselines.a2c.utils import discount_with_dones
 from baselines.a2c.utils import Scheduler, find_trainable_variables
 from baselines.a2c.utils import cat_entropy, mse
 from baselines.acktr import kfac
+from collections import deque
 
 
 class Model(object):
@@ -124,6 +125,13 @@ def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval
             fh.write(cloudpickle.dumps(make_model))
     model = make_model()
 
+    ## VALUE FUNCTION MONITORING
+    # step 1 - collecting good obserations
+    # base_obs = deque(maxlen=50)
+    # step 2 - collecting value of observations
+    base_obs = np.load('good_paths.npy')
+    vf_of_base_obs = []
+
     runner = Runner(env, model, nsteps=nsteps, gamma=gamma)
     nbatch = nenvs*nsteps
     tstart = time.time()
@@ -145,6 +153,16 @@ def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
+
+        ## VALUE FUNCTION MONITORING
+        # step 1 - collecting good obserations
+        # if len(base_obs) >= base_obs.maxlen:
+        #     base_obs.pop()
+        # base_obs.appendleft(obs)
+        # np.save('good_paths.npy', list(base_obs))
+        # step 2 - collecting value of observations
+        vf_of_base_obs.append([model.train_model.value(ob) for ob in base_obs])
+        np.save('value_functions.npy', np.array(vf_of_base_obs))
 
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
             savepath = osp.join(logger.get_dir(), 'checkpoint%.5i'%update)

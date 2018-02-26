@@ -5,6 +5,7 @@ import baselines.common as common
 from baselines.common import tf_util as U
 from baselines.acktr import kfac
 from baselines.acktr.filters import ZFilter
+from collections import deque
 
 def pathlength(path):
     return path["reward"].shape[0]# Loss function that we'll differentiate to get the policy gradient
@@ -72,12 +73,20 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         assert (qr != None)
         enqueue_threads.extend(qr.create_threads(tf.get_default_session(), coord=coord, start=True))
 
+    ## VALUE FUNCTION MONITORING
+    # step 1 - collecting good obserations
+    # base_obs = deque(maxlen=50)
+    # step 2 - collecting value of observations
+    base_obs = np.load('good_paths.npy')
+    vf_of_base_obs = []
+
     i = 0
     timesteps_so_far = 0
     while True:
-        if timesteps_so_far > num_timesteps:
+        if timesteps_so_far >= num_timesteps:
             break
         logger.log("********** Iteration %i ************"%i)
+        logger.log('Timesteps so far: ', timesteps_so_far)
 
         # Collect paths until we have enough timesteps
         timesteps_this_batch = 0
@@ -88,7 +97,7 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             n = pathlength(path)
             timesteps_this_batch += n
             timesteps_so_far += n
-            if timesteps_this_batch > timesteps_per_batch:
+            if timesteps_this_batch >= timesteps_per_batch:
                 break
 
         # Estimate advantage function
@@ -105,6 +114,17 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             advs.append(adv_t)
         # Update value function
         vf.fit(paths, vtargs)
+
+        ## VALUE FUNCTION MONITORING
+        # step 1 - collecting good obserations
+        # if len(base_obs) >= base_obs.maxlen:
+        #     base_obs.pop()
+        # new_path = rollout(env, policy, max_pathlength, obfilter=obfilter)
+        # base_obs.appendleft(new_path)
+        # np.save('good_paths.npy', list(base_obs))
+        # step 2 - collecting value of observations
+        vf_of_base_obs.append([vf.predict(ob) for ob in base_obs])
+        np.save('value_functions.npy', np.array(vf_of_base_obs))
 
         # Build arrays for policy update
         ob_no = np.concatenate([path["observation"] for path in paths])
