@@ -1,7 +1,9 @@
 from baselines import logger
 import baselines.common as common
 import numpy as np
+
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.externals import joblib
 
 class LinearDensityValueFunction(object):
 
@@ -36,6 +38,13 @@ class LinearDensityValueFunction(object):
             self.is_fit = True
         if self.is_fit:
             logger.record_tabular("EVAfter", common.explained_variance(self.neigh.predict(X), y))
+
+    def save_model(self, filename):
+        joblib.dump(self.neigh, filename)
+
+    def load_model(self, filename):
+        self.neigh = joblib.load(filename)
+        self.is_fit = True
 
 def pathlength(path):
     return path["reward"].shape[0]

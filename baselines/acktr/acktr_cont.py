@@ -76,37 +76,29 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         enqueue_threads.extend(qr.create_threads(tf.get_default_session(), coord=coord, start=True))
 
     ## SAVING MODELS
-    # saver = tf.train.Saver(max_to_keep=150)
-    # loading models
-    # saver.restore(tf.get_default_session(), 'models/reacher_policy_vf/graph-651000')
+    saver = tf.train.Saver(max_to_keep=150)
     # evaluating models
-    # value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
-    # for i, model_end in enumerate(range(2500, 662500+1, 7500)):
-    #     saver.restore(tf.get_default_session(), 'models/reacher_policy_vf/graph-{}'.format(model_end))
-    #     for init_state in range(100):
-    #         print(model_end, init_state)
-    #         env.env.curr_state = init_state
-    #         avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
-    #         for iter in range(5):
-    #             path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-    #             true_rewards = common.discount(path['reward'], gamma)
-    #             pred_rewards = vf.predict(path)
-    #             est_value_obs1 += pred_rewards[0]
-    #             est_value_obs2 += pred_rewards[1]
-    #             avg_rewards_obs1 += true_rewards[0]
-    #             avg_rewards_obs2 += true_rewards[1]
-    #         value_data[init_state, 0, i] = avg_rewards_obs1 / 5
-    #         value_data[init_state, 1, i] = avg_rewards_obs2 / 5
-    #         value_data[init_state, 2, i] = est_value_obs1 / 5
-    #         value_data[init_state, 3, i] = est_value_obs2 / 5
-    # np.save('value_estimates.npy', value_data)
-
-    ## VALUE FUNCTION MONITORING
-    # step 1 - collecting good obserations
-    # base_obs = deque(maxlen=50)
-    # step 2 - collecting value of observations
-    # base_obs = np.load('good_paths.npy')
-    # vf_of_base_obs = []
+    value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
+    for i, model_end in enumerate(range(2500, 662500+1, 7500)):
+        saver.restore(tf.get_default_session(), 'models/reacher_linear_kde/graph-{}'.format(model_end))
+        vf.load_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(model_end))
+        for init_state in range(100):
+            print(model_end, init_state)
+            env.env.curr_state = init_state
+            avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
+            for iter in range(5):
+                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+                true_rewards = common.discount(path['reward'], gamma)
+                pred_rewards = vf.predict(path)
+                est_value_obs1 += pred_rewards[0]
+                est_value_obs2 += pred_rewards[1]
+                avg_rewards_obs1 += true_rewards[0]
+                avg_rewards_obs2 += true_rewards[1]
+            value_data[init_state, 0, i] = avg_rewards_obs1 / 5
+            value_data[init_state, 1, i] = avg_rewards_obs2 / 5
+            value_data[init_state, 2, i] = est_value_obs1 / 5
+            value_data[init_state, 3, i] = est_value_obs2 / 5
+    np.save('value_estimates.npy', value_data)
 
     i = 0
     timesteps_so_far = 0
@@ -143,17 +135,6 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         # Update value function
         vf.fit(paths, vtargs)
 
-        ## VALUE FUNCTION MONITORING
-        # step 1 - collecting good obserations
-        # if len(base_obs) >= base_obs.maxlen:
-        #     base_obs.pop()
-        # new_path = rollout(env, policy, max_pathlength, obfilter=obfilter)
-        # base_obs.appendleft(new_path)
-        # np.save('good_paths.npy', list(base_obs))
-        # step 2 - collecting value of observations
-        # vf_of_base_obs.append([vf.predict(ob) for ob in base_obs])
-        # np.save('value_functions.npy', np.array(vf_of_base_obs))
-
         # Build arrays for policy update
         ob_no = np.concatenate([path["observation"] for path in paths])
         action_na = np.concatenate([path["action"] for path in paths])
@@ -166,7 +147,8 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
 
         ## SAVING MODELS
         # if i % 3 == 0:
-        #     saver.save(tf.get_default_session(), 'models/reacher_policy_vf/graph', global_step=timesteps_so_far)
+        #     saver.save(tf.get_default_session(), 'models/reacher_linear_kde/graph', global_step=timesteps_so_far)
+        #     vf.save_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(timesteps_so_far))
 
         min_stepsize = np.float32(1e-8)
         max_stepsize = np.float32(1e0)

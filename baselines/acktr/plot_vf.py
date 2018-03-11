@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 # 		plt.close()
 
 
-value_data = np.load('plots/reacher-plots-2/value_estimates.npy')
+value_data = np.load('plots/reacher-plots-linear-kde/value_estimates.npy')
 for init_state in range(value_data.shape[0]):
 	plt.plot(range(2500, 662500+1, 7500), value_data[init_state][0], label='avg rollout rewards for init state', c='blue')
 	plt.plot(range(2500, 662500+1, 7500), value_data[init_state][2], label='estimated rewards for init state', c='blue', linestyle='dashed')
@@ -29,5 +29,5 @@ for init_state in range(value_data.shape[0]):
 	plt.xlabel('Number of iterations')
 	plt.ylabel('Reward')
 	plt.legend()
-	plt.savefig('plots/reacher-plots-2/state{}.png'.format(init_state))
+	plt.savefig('plots/reacher-plots-linear-kde/state{}.png'.format(init_state))
 	plt.close()
