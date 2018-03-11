@@ -6,6 +6,7 @@ from baselines.common.cmd_util import make_mujoco_env, mujoco_arg_parser
 from baselines.acktr.acktr_cont import learn
 from baselines.acktr.policies import GaussianMlpPolicy
 from baselines.acktr.value_functions import NeuralNetValueFunction
+from baselines.acktr.value_functions_nonparametric import LinearDensityValueFunction
 
 def train(env_id, num_timesteps, seed):
     env = make_mujoco_env(env_id, seed)
@@ -14,7 +15,7 @@ def train(env_id, num_timesteps, seed):
         ob_dim = env.observation_space.shape[0]
         ac_dim = env.action_space.shape[0]
         with tf.variable_scope("vf"):
-            vf = NeuralNetValueFunction(ob_dim, ac_dim)
+            vf = LinearDensityValueFunction(n_neighbors=100)
         with tf.variable_scope("pi"):
             policy = GaussianMlpPolicy(ob_dim, ac_dim)
 

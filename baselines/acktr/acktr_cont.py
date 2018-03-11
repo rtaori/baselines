@@ -69,35 +69,37 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     # start queue runners
     enqueue_threads = []
     coord = tf.train.Coordinator()
-    for qr in [q_runner, vf.q_runner]:
+    # for qr in [q_runner, vf.q_runner]:
+    for qr in [q_runner]:
+        print('1')
         assert (qr != None)
         enqueue_threads.extend(qr.create_threads(tf.get_default_session(), coord=coord, start=True))
 
     ## SAVING MODELS
-    saver = tf.train.Saver(max_to_keep=150)
+    # saver = tf.train.Saver(max_to_keep=150)
     # loading models
     # saver.restore(tf.get_default_session(), 'models/reacher_policy_vf/graph-651000')
     # evaluating models
-    value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
-    for i, model_end in enumerate(range(2500, 662500+1, 7500)):
-        saver.restore(tf.get_default_session(), 'models/reacher_policy_vf/graph-{}'.format(model_end))
-        for init_state in range(100):
-            print(model_end, init_state)
-            env.env.curr_state = init_state
-            avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
-            for iter in range(5):
-                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                true_rewards = common.discount(path['reward'], gamma)
-                pred_rewards = vf.predict(path)
-                est_value_obs1 += pred_rewards[0]
-                est_value_obs2 += pred_rewards[1]
-                avg_rewards_obs1 += true_rewards[0]
-                avg_rewards_obs2 += true_rewards[1]
-            value_data[init_state, 0, i] = avg_rewards_obs1 / 5
-            value_data[init_state, 1, i] = avg_rewards_obs2 / 5
-            value_data[init_state, 2, i] = est_value_obs1 / 5
-            value_data[init_state, 3, i] = est_value_obs2 / 5
-    np.save('value_estimates.npy', value_data)
+    # value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
+    # for i, model_end in enumerate(range(2500, 662500+1, 7500)):
+    #     saver.restore(tf.get_default_session(), 'models/reacher_policy_vf/graph-{}'.format(model_end))
+    #     for init_state in range(100):
+    #         print(model_end, init_state)
+    #         env.env.curr_state = init_state
+    #         avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
+    #         for iter in range(5):
+    #             path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+    #             true_rewards = common.discount(path['reward'], gamma)
+    #             pred_rewards = vf.predict(path)
+    #             est_value_obs1 += pred_rewards[0]
+    #             est_value_obs2 += pred_rewards[1]
+    #             avg_rewards_obs1 += true_rewards[0]
+    #             avg_rewards_obs2 += true_rewards[1]
+    #         value_data[init_state, 0, i] = avg_rewards_obs1 / 5
+    #         value_data[init_state, 1, i] = avg_rewards_obs2 / 5
+    #         value_data[init_state, 2, i] = est_value_obs1 / 5
+    #         value_data[init_state, 3, i] = est_value_obs2 / 5
+    # np.save('value_estimates.npy', value_data)
 
     ## VALUE FUNCTION MONITORING
     # step 1 - collecting good obserations
