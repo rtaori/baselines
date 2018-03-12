@@ -6,6 +6,7 @@ from baselines.common import tf_util as U
 from baselines.acktr import kfac
 from baselines.acktr.filters import ZFilter
 from collections import deque
+import matplotlib.pyplot as plt
 
 def pathlength(path):
     return path["reward"].shape[0]# Loss function that we'll differentiate to get the policy gradient
@@ -76,29 +77,31 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         enqueue_threads.extend(qr.create_threads(tf.get_default_session(), coord=coord, start=True))
 
     ## SAVING MODELS
-    saver = tf.train.Saver(max_to_keep=150)
-    # evaluating models
-    value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
-    for i, model_end in enumerate(range(2500, 662500+1, 7500)):
-        saver.restore(tf.get_default_session(), 'models/reacher_linear_kde/graph-{}'.format(model_end))
-        vf.load_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(model_end))
-        for init_state in range(100):
-            print(model_end, init_state)
-            env.env.curr_state = init_state
-            avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
-            for iter in range(5):
-                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                true_rewards = common.discount(path['reward'], gamma)
-                pred_rewards = vf.predict(path)
-                est_value_obs1 += pred_rewards[0]
-                est_value_obs2 += pred_rewards[1]
-                avg_rewards_obs1 += true_rewards[0]
-                avg_rewards_obs2 += true_rewards[1]
-            value_data[init_state, 0, i] = avg_rewards_obs1 / 5
-            value_data[init_state, 1, i] = avg_rewards_obs2 / 5
-            value_data[init_state, 2, i] = est_value_obs1 / 5
-            value_data[init_state, 3, i] = est_value_obs2 / 5
-    np.save('value_estimates.npy', value_data)
+    # saver = tf.train.Saver(max_to_keep=150)
+    # # evaluating models
+    # value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
+    # for i, model_end in enumerate(range(2500, 662500+1, 7500)):
+    #     saver.restore(tf.get_default_session(), 'models/reacher_linear_kde/graph-{}'.format(model_end))
+    #     vf.load_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(model_end))
+    #     for init_state in range(100):
+    #         print(model_end, init_state)
+    #         env.env.curr_state = init_state
+    #         avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
+    #         for iter in range(5):
+    #             path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+    #             true_rewards = common.discount(path['reward'], gamma)
+    #             pred_rewards = vf.predict(path)
+    #             est_value_obs1 += pred_rewards[0]
+    #             est_value_obs2 += pred_rewards[1]
+    #             avg_rewards_obs1 += true_rewards[0]
+    #             avg_rewards_obs2 += true_rewards[1]
+    #         value_data[init_state, 0, i] = avg_rewards_obs1 / 5
+    #         value_data[init_state, 1, i] = avg_rewards_obs2 / 5
+    #         value_data[init_state, 2, i] = est_value_obs1 / 5
+    #         value_data[init_state, 3, i] = est_value_obs2 / 5
+    #     env.env.curr_state = None
+    # np.save('value_estimates.npy', value_data)
+    avg_vals, est_vals = [], []
 
     i = 0
     timesteps_so_far = 0
@@ -146,9 +149,21 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         do_update(ob_no, action_na, standardized_adv_n)
 
         ## SAVING MODELS
-        # if i % 3 == 0:
+        if i % 3 == 0:
         #     saver.save(tf.get_default_session(), 'models/reacher_linear_kde/graph', global_step=timesteps_so_far)
         #     vf.save_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(timesteps_so_far))
+            env.env.curr_state = 20
+            avg_val, est_val = 0, 0
+            for _ in range(5):
+                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+                avg_val += common.discount(path['reward'], gamma)[0]
+                est_val += vf.predict(path)[0]
+            avg_vals.append(avg_val / 5)
+            est_vals.append(est_val / 5)
+            plt.plot(avg_vals, label='avg rollout rewards for init state')
+            plt.plot(est_vals, label='estimated rewards for init state', linestyle='dashed')
+            plt.savefig('plots/experiment-state20.png')
+            env.env.curr_state = None
 
         min_stepsize = np.float32(1e-8)
         max_stepsize = np.float32(1e0)
