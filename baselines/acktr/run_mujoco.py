@@ -15,7 +15,7 @@ def train(env_id, num_timesteps, seed):
         ob_dim = env.observation_space.shape[0]
         ac_dim = env.action_space.shape[0]
         with tf.variable_scope("vf"):
-            vf = LinearDensityValueFunction(n_neighbors=100)
+            vf = LinearDensityValueFunction(n_neighbors=200)
         with tf.variable_scope("pi"):
             policy = GaussianMlpPolicy(ob_dim, ac_dim)
 

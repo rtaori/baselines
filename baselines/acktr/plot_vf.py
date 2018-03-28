@@ -26,7 +26,7 @@ for init_state in range(value_data.shape[0]):
 	plt.plot(range(2500, 662500+1, 7500), value_data[init_state][1], label='avg rollout rewards for state after init', c='red')
 	plt.plot(range(2500, 662500+1, 7500), value_data[init_state][3], label='estimated rewards for state after init', c='red', linestyle='dashed')
 	plt.title('Reward estimation for state {}'.format(init_state))
-	plt.xlabel('Number of iterations')
+	plt.xlabel('Number of timesteps')
 	plt.ylabel('Reward')
 	plt.legend()
 	plt.savefig('plots/reacher-plots-linear-kde/state{}.png'.format(init_state))

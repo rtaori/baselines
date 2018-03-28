@@ -72,13 +72,12 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     coord = tf.train.Coordinator()
     # for qr in [q_runner, vf.q_runner]:
     for qr in [q_runner]:
-        print('1')
         assert (qr != None)
         enqueue_threads.extend(qr.create_threads(tf.get_default_session(), coord=coord, start=True))
 
-    ## SAVING MODELS
-    # saver = tf.train.Saver(max_to_keep=150)
-    # # evaluating models
+    # SAVING MODELS
+    saver = tf.train.Saver(max_to_keep=150)
+    # evaluating models
     # value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
     # for i, model_end in enumerate(range(2500, 662500+1, 7500)):
     #     saver.restore(tf.get_default_session(), 'models/reacher_linear_kde/graph-{}'.format(model_end))
@@ -101,7 +100,12 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     #         value_data[init_state, 3, i] = est_value_obs2 / 5
     #     env.env.curr_state = None
     # np.save('value_estimates.npy', value_data)
-    avg_vals, est_vals = [], []
+    states = [18, 45, 23, 80]
+    avg_vals, est_vals_linreg, est_vals_knn = [], [], []
+    for _ in range(len(states)):
+        avg_vals.append([])
+        est_vals_linreg.append([])
+        est_vals_knn.append([])
 
     i = 0
     timesteps_so_far = 0
@@ -150,19 +154,33 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
 
         ## SAVING MODELS
         if i % 3 == 0:
-        #     saver.save(tf.get_default_session(), 'models/reacher_linear_kde/graph', global_step=timesteps_so_far)
-        #     vf.save_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(timesteps_so_far))
-            env.env.curr_state = 20
-            avg_val, est_val = 0, 0
-            for _ in range(5):
-                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                avg_val += common.discount(path['reward'], gamma)[0]
-                est_val += vf.predict(path)[0]
-            avg_vals.append(avg_val / 5)
-            est_vals.append(est_val / 5)
-            plt.plot(avg_vals, label='avg rollout rewards for init state')
-            plt.plot(est_vals, label='estimated rewards for init state', linestyle='dashed')
-            plt.savefig('plots/experiment-state20.png')
+            saver.save(tf.get_default_session(), 'models/reacher_master/graph', global_step=timesteps_so_far)
+            vf.save_model('models/reacher_master/linreg-{}.pkl'.format(timesteps_so_far), \
+                          'models/reacher_master/knn-{}.pkl'.format(timesteps_so_far))
+            j = 0
+            for state in states:
+                env.env.curr_state = state
+                avg_val, est_val_linreg, est_val_knn = 0, 0, 0
+                for _ in range(5):
+                    path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+                    avg_val += common.discount(path['reward'], gamma)[0]
+                    est_val_linreg += vf.predict(path, linreg=True)[0]
+                    est_val_knn += vf.predict(path, knn=True)[0]
+                avg_vals[j].append(avg_val / 5)
+                est_vals_linreg[j].append(est_val_linreg / 5)
+                est_vals_knn[j].append(est_val_knn / 5)
+                plt.figure()
+                x_axis = range(2500, 250 + 7500 * len(avg_vals[j]), 7500)
+                plt.plot(x_axis, avg_vals[j], label='avg rollout rewards; init state', c='blue')
+                plt.plot(x_axis, est_vals_linreg[j], label='linreg - est rewards; init state', linestyle='dashed', c='green')
+                plt.plot(x_axis, est_vals_knn[j], label='knn - est rewards; init state', linestyle='dashed', c='red')
+                plt.title('Reward estimation for state {}'.format(state))
+                plt.xlabel('Number of timesteps')
+                plt.ylabel('Reward')
+                plt.legend()
+                # plt.savefig('plots/reacher-master/state-{}.png'.format(state))
+                plt.close()
+                j += 1
             env.env.curr_state = None
 
         min_stepsize = np.float32(1e-8)
