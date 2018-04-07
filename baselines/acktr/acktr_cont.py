@@ -17,6 +17,7 @@ def rollout(env, policy, max_pathlength, animate=False, obfilter=None):
     """
     ob = env.reset()
     prev_ob = np.float32(np.zeros(ob.shape))
+    # prev_ob = ob
     if obfilter: ob = obfilter(ob)
     terminated = False
 
@@ -49,7 +50,6 @@ def rollout(env, policy, max_pathlength, animate=False, obfilter=None):
 
 def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     animate=False, callback=None, desired_kl=0.002):
-
     obfilter = ZFilter(env.observation_space.shape)
 
     max_pathlength = env.spec.timestep_limit
@@ -100,12 +100,8 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     #         value_data[init_state, 3, i] = est_value_obs2 / 5
     #     env.env.curr_state = None
     # np.save('value_estimates.npy', value_data)
-    states = [18, 45, 23, 80]
-    avg_vals, est_vals_linreg, est_vals_knn = [], [], []
-    for _ in range(len(states)):
-        avg_vals.append([])
-        est_vals_linreg.append([])
-        est_vals_knn.append([])
+    avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
+    timesteps = []
 
     i = 0
     timesteps_so_far = 0
@@ -154,34 +150,27 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
 
         ## SAVING MODELS
         if i % 3 == 0:
-            saver.save(tf.get_default_session(), 'models/reacher_master/graph', global_step=timesteps_so_far)
-            vf.save_model('models/reacher_master/linreg-{}.pkl'.format(timesteps_so_far), \
-                          'models/reacher_master/knn-{}.pkl'.format(timesteps_so_far))
-            j = 0
-            for state in states:
-                env.env.curr_state = state
-                avg_val, est_val_linreg, est_val_knn = 0, 0, 0
-                for _ in range(5):
-                    path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                    avg_val += common.discount(path['reward'], gamma)[0]
-                    est_val_linreg += vf.predict(path, linreg=True)[0]
-                    est_val_knn += vf.predict(path, knn=True)[0]
-                avg_vals[j].append(avg_val / 5)
-                est_vals_linreg[j].append(est_val_linreg / 5)
-                est_vals_knn[j].append(est_val_knn / 5)
-                plt.figure()
-                x_axis = range(2500, 250 + 7500 * len(avg_vals[j]), 7500)
-                plt.plot(x_axis, avg_vals[j], label='avg rollout rewards; init state', c='blue')
-                plt.plot(x_axis, est_vals_linreg[j], label='linreg - est rewards; init state', linestyle='dashed', c='green')
-                plt.plot(x_axis, est_vals_knn[j], label='knn - est rewards; init state', linestyle='dashed', c='red')
-                plt.title('Reward estimation for state {}'.format(state))
-                plt.xlabel('Number of timesteps')
-                plt.ylabel('Reward')
-                plt.legend()
-                # plt.savefig('plots/reacher-master/state-{}.png'.format(state))
-                plt.close()
-                j += 1
-            env.env.curr_state = None
+            saver.save(tf.get_default_session(), 'models/hopper_master/graph', global_step=timesteps_so_far)
+            # vf.save_model('models/hopper_master/linreg-{}.pkl'.format(timesteps_so_far))
+            avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
+            for _ in range(5):
+                path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
+                avg_val += path['reward'].sum()
+                avg_val_discounted += common.discount(path['reward'], gamma)[0]
+                est_val_linreg += vf.predict(path)[0]
+            avg_vals.append(avg_val / 5)
+            avg_vals_discounted.append(avg_val_discounted / 5)
+            est_vals_linreg.append(est_val_linreg / 5)
+            timesteps.append(timesteps_so_far)
+            plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
+            plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
+            plt.plot(timesteps, est_vals_linreg, label='nn - est rewards', c='blue', linestyle='dashed')
+            plt.title('Reward estimation for Hopper-v2')
+            plt.xlabel('Number of timesteps')
+            plt.ylabel('Reward')
+            plt.legend()
+            plt.savefig('plots/hopper_master/Hopper-v2.png')
+            plt.close()
 
         min_stepsize = np.float32(1e-8)
         max_stepsize = np.float32(1e0)
