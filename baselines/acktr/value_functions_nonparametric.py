@@ -14,7 +14,8 @@ class LinearDensityValueFunction(object):
         if self.knn:
             self.neigh = KNeighborsRegressor(n_neighbors=n_neighbors)
         # self.delete_features = [10, 21, 24, 25] #reacher
-        self.delete_features = [25, 26, 27]
+        self.delete_features = [25, 26, 27] #hopper
+        # self.delete_features = []
 
     def _preproc(self, path):
         l = pathlength(path)
@@ -37,10 +38,10 @@ class LinearDensityValueFunction(object):
         ind = self.tree.query(X_query, k=self.n_neighbors, return_distance=False)
         X, y = self.X[ind], self.y[ind]
         X_t = X.swapaxes(1, 2)
-        # for i in range(X.shape[2]):
-        #     # print(X[0, :, i])
-        #     if np.all(X[0, :, i] == 1):
-        #         print('{} has all 1'.format(i))
+        for i in range(X.shape[2]):
+            # print(X[0, :, i])
+            if np.all(X[0, :, i] == 0):
+                print('{} has all 0'.format(i))
         inv = np.linalg.inv(X_t @ X) # + 1e-10 * np.eye(X.shape[2])
         end = np.einsum('ijk,ik->ij', X_t, y)
         weights = np.einsum('ijk,ik->ij', inv, end)
@@ -48,9 +49,12 @@ class LinearDensityValueFunction(object):
         return y_pred
 
     def fit(self, paths, targvals):
-        X = np.concatenate([self._preproc(p) for p in paths])
-        y = np.concatenate(targvals)
-        X = np.delete(X, self.delete_features, axis=1) #only for reacher
+        ## filter out the first obs since its (obs, 0) state
+        X = np.concatenate([self._preproc(p)[1:] for p in paths])
+        y = np.concatenate([targval[1:] for targval in targvals])
+        # X = np.concatenate([self._preproc(p) for p in paths])
+        # y = np.concatenate(targvals)
+        X = np.delete(X, self.delete_features, axis=1)
         if not self.has_data:
             self.X = np.array(X)
             self.y = np.array(y)
