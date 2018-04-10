@@ -11,7 +11,7 @@ from baselines.acktr.value_functions_nonparametric_atari import LinearDensityVal
 def train(env_id, num_timesteps, seed, num_cpu):
     env = VecFrameStack(make_atari_env(env_id, num_cpu, seed), 4)
     policy_fn = CnnPolicy
-    value_fn = LinearDensityValueFunction(n_neighbors=200)
+    value_fn = LinearDensityValueFunction
     learn(policy_fn, value_fn, env, seed, total_timesteps=int(num_timesteps * 1.1), nprocs=num_cpu)
     env.close()
 

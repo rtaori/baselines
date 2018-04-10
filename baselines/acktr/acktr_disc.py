@@ -17,7 +17,7 @@ from collections import deque
 
 class Model(object):
 
-    def __init__(self, policy, value, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
+    def __init__(self, policy, value_fn, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, lrschedule='linear'):
         config = tf.ConfigProto(allow_soft_placement=True,
@@ -35,7 +35,7 @@ class Model(object):
 
         self.model = step_model = policy(sess, ob_space, ac_space, nenvs, 1, reuse=False)
         self.model2 = train_model = policy(sess, ob_space, ac_space, nenvs*nsteps, nsteps, reuse=True)
-        self.value_fn = value
+        self.value_fn = value_fn(n_neighbors=200, sess=self.sess)
 
         logpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         self.logits = logits = train_model.pi
@@ -137,8 +137,12 @@ def learn(policy, value, env, seed, total_timesteps=int(40e6), gamma=0.99, log_i
     tstart = time.time()
     coord = tf.train.Coordinator()
     enqueue_threads = model.q_runner.create_threads(model.sess, coord=coord, start=True)
+
+    avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
+    timesteps = []
     for update in range(1, total_timesteps//nbatch+1):
-        obs, states, rewards, masks, actions, values = runner.run()
+        obs, states, rewards, masks, actions, values, undiscounted_rewards = runner.run()
+        print('finished running')
         policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
         model.old_obs = obs
         nseconds = time.time()-tstart
@@ -153,6 +157,21 @@ def learn(policy, value, env, seed, total_timesteps=int(40e6), gamma=0.99, log_i
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
+
+        avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
+        avg_val, avg_val_discounted, est_val_linreg = undiscounted_rewards[:, 0].mean(), rewards[:, 0].mean(), values[:, 0].mean()
+        avg_vals.append(avg_val), avg_vals_discounted.append(avg_val_discounted), est_vals_linreg.append(est_val_linreg)
+        timesteps.append(update*nbatch)
+        plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
+        plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
+        plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='blue', linestyle='dashed')
+        plt.title('Reward estimation for BreakoutNoFrameskip-v2')
+        plt.xlabel('Number of timesteps')
+        plt.ylabel('Reward')
+        plt.legend()
+        plt.savefig('plots/BreakoutNoFrameskip_master/BreakoutNoFrameskip-v2.png')
+        plt.close()
+
 
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
             savepath = osp.join(logger.get_dir(), 'checkpoint%.5i'%update)

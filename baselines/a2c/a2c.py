@@ -17,6 +17,8 @@ from baselines.a2c.utils import discount_with_dones
 from baselines.a2c.utils import Scheduler, make_path, find_trainable_variables
 from baselines.a2c.utils import cat_entropy, mse
 
+import time
+
 class Model(object):
 
     def __init__(self, policy, ob_space, ac_space, nenvs, nsteps,
@@ -95,7 +97,7 @@ class Runner(object):
         nh, nw, nc = env.observation_space.shape
         nenv = env.num_envs
         self.batch_ob_shape = (nenv*nsteps, nh, nw, nc)
-        self.obs = np.zeros((nenv, nh, nw, nc), dtype=np.uint8)
+        self.obs = np.random.randint(0, high=200, size=(nenv, nh, nw, nc), dtype=np.uint8)
         self.nc = nc
         obs = env.reset()
         self.gamma = gamma
@@ -131,6 +133,7 @@ class Runner(object):
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
         last_values = self.model.get_values(self.obs).tolist()
+        undiscounted_rewards = mb_rewards.copy()
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             rewards = rewards.tolist()
@@ -144,7 +147,7 @@ class Runner(object):
         mb_actions = mb_actions.flatten()
         mb_values = mb_values.flatten()
         mb_masks = mb_masks.flatten()
-        return mb_obs, mb_states, mb_rewards, mb_masks, mb_actions, mb_values
+        return mb_obs, mb_states, mb_rewards, mb_masks, mb_actions, mb_values, undiscounted_rewards
 
 def learn(policy, env, seed, nsteps=5, total_timesteps=int(80e6), vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, lr=7e-4, lrschedule='linear', epsilon=1e-5, alpha=0.99, gamma=0.99, log_interval=100):
     tf.reset_default_graph()
