@@ -40,7 +40,7 @@ class LinearDensityValueFunction(object):
         X, y = self.X[ind], self.y[ind]
         start = time.time()
 
-        X, y, X_query = torch.from_numpy(X).float(), torch.from_numpy(y).float(), torch.from_numpy(X_query).float()
+        X, y, X_query = torch.from_numpy(X).cuda().float(), torch.from_numpy(y).cuda().float(), torch.from_numpy(X_query).cuda().float()
         X_flat = X.view(-1, X.shape[2])
         X_flat_mean = X_flat.mean(-1, True)
         X_flat = X_flat - X_flat_mean

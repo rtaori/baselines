@@ -19,6 +19,7 @@ from baselines.a2c.utils import cat_entropy, mse
 
 import time
 
+
 class Model(object):
 
     def __init__(self, policy, ob_space, ac_space, nenvs, nsteps,
@@ -143,10 +144,10 @@ class Runner(object):
             else:
                 rewards = discount_with_dones(rewards, dones, self.gamma)
             mb_rewards[n] = rewards
-        mb_rewards = mb_rewards.flatten()
-        mb_actions = mb_actions.flatten()
-        mb_values = mb_values.flatten()
-        mb_masks = mb_masks.flatten()
+        # mb_rewards = mb_rewards.flatten()
+        # mb_actions = mb_actions.flatten()
+        # mb_values = mb_values.flatten()
+        # mb_masks = mb_masks.flatten()
         return mb_obs, mb_states, mb_rewards, mb_masks, mb_actions, mb_values, undiscounted_rewards
 
 def learn(policy, env, seed, nsteps=5, total_timesteps=int(80e6), vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, lr=7e-4, lrschedule='linear', epsilon=1e-5, alpha=0.99, gamma=0.99, log_interval=100):

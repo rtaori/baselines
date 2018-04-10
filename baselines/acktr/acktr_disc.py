@@ -14,6 +14,8 @@ from baselines.a2c.utils import cat_entropy, mse
 from baselines.acktr import kfac
 from collections import deque
 
+import matplotlib.pyplot as plt
+
 
 class Model(object):
 
@@ -143,12 +145,12 @@ def learn(policy, value, env, seed, total_timesteps=int(40e6), gamma=0.99, log_i
     for update in range(1, total_timesteps//nbatch+1):
         obs, states, rewards, masks, actions, values, undiscounted_rewards = runner.run()
         print('finished running')
-        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
+        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
         model.old_obs = obs
         nseconds = time.time()-tstart
         fps = int((update*nbatch)/nseconds)
         if update % log_interval == 0 or update == 1:
-            ev = explained_variance(values, rewards)
+            ev = explained_variance(values.flatten(), rewards.flatten())
             logger.record_tabular("nupdates", update)
             logger.record_tabular("total_timesteps", update*nbatch)
             logger.record_tabular("fps", fps)
@@ -158,7 +160,7 @@ def learn(policy, value, env, seed, total_timesteps=int(40e6), gamma=0.99, log_i
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
 
-        avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
+
         avg_val, avg_val_discounted, est_val_linreg = undiscounted_rewards[:, 0].mean(), rewards[:, 0].mean(), values[:, 0].mean()
         avg_vals.append(avg_val), avg_vals_discounted.append(avg_val_discounted), est_vals_linreg.append(est_val_linreg)
         timesteps.append(update*nbatch)
