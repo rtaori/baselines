@@ -17,7 +17,7 @@ from collections import deque
 
 class Model(object):
 
-    def __init__(self, policy, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
+    def __init__(self, policy, value, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, lrschedule='linear'):
         config = tf.ConfigProto(allow_soft_placement=True,
@@ -35,6 +35,7 @@ class Model(object):
 
         self.model = step_model = policy(sess, ob_space, ac_space, nenvs, 1, reuse=False)
         self.model2 = train_model = policy(sess, ob_space, ac_space, nenvs*nsteps, nsteps, reuse=True)
+        self.value_fn = value
 
         logpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         self.logits = logits = train_model.pi
@@ -43,17 +44,19 @@ class Model(object):
         pg_loss = tf.reduce_mean(ADV*logpac)
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         pg_loss = pg_loss - ent_coef * entropy
-        vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
+        # vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
+        vf_loss = tf.placeholder(tf.float32, shape=[])
         train_loss = pg_loss + vf_coef * vf_loss
 
 
         ##Fisher loss construction
         self.pg_fisher = pg_fisher_loss = -tf.reduce_mean(logpac)
-        sample_net = train_model.vf + tf.random_normal(tf.shape(train_model.vf))
-        self.vf_fisher = vf_fisher_loss = - vf_fisher_coef*tf.reduce_mean(tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
-        self.joint_fisher = joint_fisher_loss = pg_fisher_loss + vf_fisher_loss
+        # sample_net = train_model.vf + tf.random_normal(tf.shape(train_model.vf))
+        # self.vf_fisher = vf_fisher_loss = - vf_fisher_coef*tf.reduce_mean(tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
+        self.joint_fisher = joint_fisher_loss = pg_fisher_loss #+ vf_fisher_loss
 
         self.params=params = find_trainable_variables("model")
+        self.params = params = self.params[:-2]
 
         self.grads_check = grads = tf.gradients(train_loss,params)
 
@@ -67,20 +70,25 @@ class Model(object):
         self.q_runner = q_runner
         self.lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedule)
 
+        self.get_values = lambda obs: self.value_fn.predict(obs)
+        self.value_loss = lambda obs, rewards: np.square(self.get_values(obs) - rewards).mean()
+
         def train(obs, states, rewards, masks, actions, values):
             advs = rewards - values
             for step in range(len(obs)):
                 cur_lr = self.lr.value()
 
-            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, PG_LR:cur_lr}
+            value_loss = self.value_loss(obs, rewards)
+            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, PG_LR:cur_lr, vf_loss:value_loss}
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
 
-            policy_loss, value_loss, policy_entropy, _ = sess.run(
-                [pg_loss, vf_loss, entropy, train_op],
+            policy_loss, policy_entropy, _ = sess.run(
+                [pg_loss, entropy, train_op],
                 td_map
             )
+            self.value_fn.fit(obs, rewards)
             return policy_loss, value_loss, policy_entropy
 
         def save(save_path):
@@ -94,8 +102,6 @@ class Model(object):
                 restores.append(p.assign(loaded_p))
             sess.run(restores)
 
-
-
         self.train = train
         self.save = save
         self.load = load
@@ -106,7 +112,7 @@ class Model(object):
         self.initial_state = step_model.initial_state
         tf.global_variables_initializer().run(session=sess)
 
-def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, nsteps=20,
+def learn(policy, value, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, save_interval=None, lrschedule='linear'):
     tf.reset_default_graph()
@@ -115,7 +121,7 @@ def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval
     nenvs = env.num_envs
     ob_space = env.observation_space
     ac_space = env.action_space
-    make_model = lambda : Model(policy, ob_space, ac_space, nenvs, total_timesteps, nprocs=nprocs, nsteps
+    make_model = lambda : Model(policy, value, ob_space, ac_space, nenvs, total_timesteps, nprocs=nprocs, nsteps
                                 =nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=
                                 vf_fisher_coef, lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip,
                                 lrschedule=lrschedule)
@@ -125,12 +131,6 @@ def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval
             fh.write(cloudpickle.dumps(make_model))
     model = make_model()
 
-    ## VALUE FUNCTION MONITORING
-    # step 1 - collecting good obserations
-    # base_obs = deque(maxlen=50)
-    # step 2 - collecting value of observations
-    base_obs = np.load('good_paths.npy')
-    vf_of_base_obs = []
 
     runner = Runner(env, model, nsteps=nsteps, gamma=gamma)
     nbatch = nenvs*nsteps
@@ -153,16 +153,6 @@ def learn(policy, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
-
-        ## VALUE FUNCTION MONITORING
-        # step 1 - collecting good obserations
-        # if len(base_obs) >= base_obs.maxlen:
-        #     base_obs.pop()
-        # base_obs.appendleft(obs)
-        # np.save('good_paths.npy', list(base_obs))
-        # step 2 - collecting value of observations
-        vf_of_base_obs.append([model.train_model.value(ob) for ob in base_obs])
-        np.save('value_functions.npy', np.array(vf_of_base_obs))
 
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
             savepath = osp.join(logger.get_dir(), 'checkpoint%.5i'%update)

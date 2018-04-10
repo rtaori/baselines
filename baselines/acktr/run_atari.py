@@ -5,11 +5,14 @@ from baselines.acktr.acktr_disc import learn
 from baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.ppo2.policies import CnnPolicy
+from baselines.acktr.value_functions_nonparametric_atari import LinearDensityValueFunction
+
 
 def train(env_id, num_timesteps, seed, num_cpu):
     env = VecFrameStack(make_atari_env(env_id, num_cpu, seed), 4)
     policy_fn = CnnPolicy
-    learn(policy_fn, env, seed, total_timesteps=int(num_timesteps * 1.1), nprocs=num_cpu)
+    value_fn = LinearDensityValueFunction(n_neighbors=200)
+    learn(policy_fn, value_fn, env, seed, total_timesteps=int(num_timesteps * 1.1), nprocs=num_cpu)
     env.close()
 
 def main():

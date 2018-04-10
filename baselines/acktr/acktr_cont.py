@@ -155,9 +155,9 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
             for _ in range(5):
                 path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                avg_val += path['reward'][1:].sum()
-                avg_val_discounted += common.discount(path['reward'], gamma)[1]
-                est_val_linreg += vf.predict(path)[1]
+                avg_val += path['reward'].sum()
+                avg_val_discounted += common.discount(path['reward'], gamma)
+                est_val_linreg += vf.predict(path)
             avg_vals.append(avg_val / 5)
             avg_vals_discounted.append(avg_val_discounted / 5)
             est_vals_linreg.append(est_val_linreg / 5)
