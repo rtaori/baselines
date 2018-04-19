@@ -7,6 +7,8 @@ from baselines.acktr import kfac
 from baselines.acktr.filters import ZFilter
 from collections import deque
 import matplotlib.pyplot as plt
+from sklearn.externals import joblib
+import os
 
 def pathlength(path):
     return path["reward"].shape[0]# Loss function that we'll differentiate to get the policy gradient
@@ -16,7 +18,6 @@ def rollout(env, policy, max_pathlength, animate=False, obfilter=None):
     Simulate the env and policy for max_pathlength steps
     """
     ob = env.reset()
-    # prev_ob = np.float32(np.zeros(ob.shape))
     prev_ob = ob
     if obfilter: ob = obfilter(ob)
     terminated = False
@@ -49,7 +50,7 @@ def rollout(env, policy, max_pathlength, animate=False, obfilter=None):
             "action_dist": np.array(ac_dists), "logp" : np.array(logps)}
 
 def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
-    animate=False, callback=None, desired_kl=0.002):
+    animate=False, callback=None, desired_kl=0.002, run_number=None, env_id=None):
     obfilter = ZFilter(env.observation_space.shape)
 
     max_pathlength = env.spec.timestep_limit
@@ -77,29 +78,6 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
 
     # SAVING MODELS
     saver = tf.train.Saver(max_to_keep=150)
-    # evaluating models
-    # value_data = np.zeros((100, 4, len(range(2500, 662500+1, 7500))))
-    # for i, model_end in enumerate(range(2500, 662500+1, 7500)):
-    #     saver.restore(tf.get_default_session(), 'models/reacher_linear_kde/graph-{}'.format(model_end))
-    #     vf.load_model('models/reacher_linear_kde/linear_kde-{}.pkl'.format(model_end))
-    #     for init_state in range(100):
-    #         print(model_end, init_state)
-    #         env.env.curr_state = init_state
-    #         avg_rewards_obs1, avg_rewards_obs2, est_value_obs1, est_value_obs2 = 0, 0, 0, 0
-    #         for iter in range(5):
-    #             path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-    #             true_rewards = common.discount(path['reward'], gamma)
-    #             pred_rewards = vf.predict(path)
-    #             est_value_obs1 += pred_rewards[0]
-    #             est_value_obs2 += pred_rewards[1]
-    #             avg_rewards_obs1 += true_rewards[0]
-    #             avg_rewards_obs2 += true_rewards[1]
-    #         value_data[init_state, 0, i] = avg_rewards_obs1 / 5
-    #         value_data[init_state, 1, i] = avg_rewards_obs2 / 5
-    #         value_data[init_state, 2, i] = est_value_obs1 / 5
-    #         value_data[init_state, 3, i] = est_value_obs2 / 5
-    #     env.env.curr_state = None
-    # np.save('value_estimates.npy', value_data)
     avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
     timesteps = []
 
@@ -136,7 +114,7 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             adv_t = common.discount(delta_t, gamma * lam)
             advs.append(adv_t)
         # Update value function
-        vf.fit(paths, vtargs)
+        vf.fit(paths, vtargs, timesteps_so_far)
 
         # Build arrays for policy update
         ob_no = np.concatenate([path["observation"] for path in paths])
@@ -150,26 +128,36 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
 
         ## SAVING MODELS
         if i % 3 == 0:
-            saver.save(tf.get_default_session(), 'models/hopper_master/graph', global_step=timesteps_so_far)
-            # vf.save_model('models/hopper_master/linreg-{}.pkl'.format(timesteps_so_far))
             avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
             for _ in range(5):
                 path = rollout(env, policy, max_pathlength, animate=False, obfilter=obfilter)
-                avg_val += path['reward'][1:].sum()
+                avg_val += path['reward'].sum()
                 avg_val_discounted += common.discount(path['reward'], gamma)[1]
                 est_val_linreg += vf.predict(path)[1]
             avg_vals.append(avg_val / 5)
             avg_vals_discounted.append(avg_val_discounted / 5)
             est_vals_linreg.append(est_val_linreg / 5)
             timesteps.append(timesteps_so_far)
+
+            save_path = 'testing/{}/run{}/'.format(env_id, run_number)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+            saver.save(tf.get_default_session(), save_path+'pi', global_step=timesteps_so_far)
+            vf.save_model(save_path+'vf.pkl', save_path+'vf_dict.pkl')
+
+            joblib.dump(avg_vals, save_path+'avg_vals.pkl')
+            joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
+            joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
+            joblib.dump(timesteps, save_path+'timesteps.pkl')
+
             plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
             plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
             plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='blue', linestyle='dashed')
-            plt.title('Reward estimation for Hopper-v2')
+            plt.title('Reward estimation for {}'.format(env_id))
             plt.xlabel('Number of timesteps')
             plt.ylabel('Reward')
             plt.legend()
-            plt.savefig('plots/hopper_master/Hopper-v2.png')
+            plt.savefig(save_path + 'plot.png')
             plt.close()
 
         min_stepsize = np.float32(1e-8)

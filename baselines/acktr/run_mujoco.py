@@ -8,7 +8,7 @@ from baselines.acktr.policies import GaussianMlpPolicy
 from baselines.acktr.value_functions import NeuralNetValueFunction
 from baselines.acktr.value_functions_nonparametric import LinearDensityValueFunction
 
-def train(env_id, num_timesteps, seed):
+def train(env_id, num_timesteps, seed, run_number):
     env = make_mujoco_env(env_id, seed)
 
     with tf.Session(config=tf.ConfigProto()):
@@ -16,21 +16,24 @@ def train(env_id, num_timesteps, seed):
         ac_dim = env.action_space.shape[0]
         with tf.variable_scope("vf"):
             # vf = NeuralNetValueFunction(ob_dim, ac_dim)
-            vf = LinearDensityValueFunction(n_neighbors=200, knn=False)
+            vf = LinearDensityValueFunction(n_neighbors=200, ob_dim=ob_dim, ac_dim=ac_dim)
         with tf.variable_scope("pi"):
             policy = GaussianMlpPolicy(ob_dim, ac_dim)
 
         learn(env, policy=policy, vf=vf,
             gamma=0.99, lam=0.97, timesteps_per_batch=2500,
-            desired_kl=0.002,
-            num_timesteps=num_timesteps, animate=False)
+            desired_kl=0.002, num_timesteps=num_timesteps, 
+            animate=False, run_number=run_number, env_id=env_id)
 
         env.close()
 
 def main():
     args = mujoco_arg_parser().parse_args()
     logger.configure()
-    train(args.env, num_timesteps=args.num_timesteps, seed=args.seed)
+
+    for run_number in range(1, 6):
+        train(args.env, num_timesteps=args.num_timesteps, seed=args.seed, run_number=run_number)
+        tf.reset_default_graph()
 
 if __name__ == "__main__":
     main()

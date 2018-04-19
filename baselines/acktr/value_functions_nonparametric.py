@@ -1,89 +1,80 @@
 from baselines import logger
 import baselines.common as common
 import numpy as np
-
-from sklearn.neighbors import KDTree, KNeighborsRegressor
+from sklearn.neighbors import KDTree
 from sklearn.externals import joblib
+import tensorflow as tf
+import time
 
 class LinearDensityValueFunction(object):
 
-    def __init__(self, n_neighbors, linreg=True, knn=True):
+    def __init__(self, n_neighbors, ob_dim, ac_dim):
         self.n_neighbors = n_neighbors
-        self.is_fit, self.has_data = False, False
-        self.linreg, self.knn = linreg, knn
-        if self.knn:
-            self.neigh = KNeighborsRegressor(n_neighbors=n_neighbors)
-        # self.delete_features = [10, 21, 24, 25] #reacher
-        self.delete_features = [25, 26, 27] #hopper
-        # self.delete_features = []
+        self.dim = 2 * ob_dim + 2 * ac_dim + 1
+        self.tree = KDTree([[None]])
+        self.X, self.y = None, None
+        self.timestep_to_numdatapoints_dict = {}
+
+        # define the graph for linear regression
+        self.X_linreg = tf.placeholder(tf.float32, shape=[None, self.n_neighbors, self.dim])
+        self.y_linreg = tf.placeholder(tf.float32, shape=[None, self.n_neighbors]) 
+        self.X_query_linreg = tf.placeholder(tf.float32, shape=[None, self.dim])
+        self.ridge = tf.eye(self.dim) * 1e-2
+
+        Xt_linreg = tf.transpose(self.X_linreg, [0, 2, 1])
+        self.inv = tf.matrix_inverse(tf.matmul(Xt_linreg, self.X_linreg) + self.ridge)
+        end = tf.matmul(Xt_linreg, tf.expand_dims(self.y_linreg, -1))
+        self.weights = tf.squeeze(tf.matmul(self.inv, end), -1)
+        self.y_pred = tf.reduce_sum(self.X_query_linreg * self.weights, -1)
 
     def _preproc(self, path):
-        l = pathlength(path)
-        al = np.arange(l).reshape(-1,1)/10.0
+        l = path["reward"].shape[0]
         act = path["action_dist"].astype('float32')
-        X = np.concatenate([path['observation'], act, al, np.ones((l, 1))], axis=1)
+        al = np.arange(l).reshape(-1,1) / 10.0
+        X = np.concatenate([path['observation'], act, al], axis=1)
         return X
 
-    def predict(self, path, linreg=True, knn=False):
+    def predict(self, path):
         X_query = self._preproc(path)
-        X_query = np.delete(X_query, self.delete_features, axis=1) #only for reacher
-        if not self.is_fit:
+        if not self.is_fit():
             return np.random.rand(X_query.shape[0])
-        if linreg:
-            return self._predict_linreg(X_query)
-        if knn:
-            return self.neigh.predict(X_query)
+        return self._predict_linreg(X_query)
 
     def _predict_linreg(self, X_query):
         ind = self.tree.query(X_query, k=self.n_neighbors, return_distance=False)
         X, y = self.X[ind], self.y[ind]
-        X_t = X.swapaxes(1, 2)
-        for i in range(X.shape[2]):
-            # print(X[0, :, i])
-            if np.all(X[0, :, i] == 0):
-                print('{} has all 0'.format(i))
-        inv = np.linalg.inv(X_t @ X) # + 1e-10 * np.eye(X.shape[2])
-        end = np.einsum('ijk,ik->ij', X_t, y)
-        weights = np.einsum('ijk,ik->ij', inv, end)
-        y_pred = (X_query * weights).sum(axis=1)
+        # X_t = X.swapaxes(1, 2)
+        # inv = np.linalg.inv(X_t @ X + 1e-2 * np.eye(X.shape[2]))
+        # end = np.einsum('ijk,ik->ij', X_t, y)
+        # weights = np.einsum('ijk,ik->ij', inv, end)
+        # y_pred = (X_query * weights).sum(axis=1)
+        y_pred = tf.get_default_session().run(self.y_pred, 
+            feed_dict={self.X_linreg: X, self.y_linreg: y, self.X_query_linreg: X_query})
         return y_pred
 
-    def fit(self, paths, targvals):
-        ## filter out the first obs since its (obs, 0) state
-        X = np.concatenate([self._preproc(p)[1:] for p in paths])
-        y = np.concatenate([targval[1:] for targval in targvals])
-        # X = np.concatenate([self._preproc(p) for p in paths])
-        # y = np.concatenate(targvals)
-        X = np.delete(X, self.delete_features, axis=1)
-        if not self.has_data:
+    def fit(self, paths, targvals, timesteps_so_far):
+        X = np.concatenate([self._preproc(p) for p in paths])
+        y = np.concatenate(targvals)
+
+        if self.is_fit():
+            logger.record_tabular("EVBefore", common.explained_variance(self._predict_linreg(X), y))
+
+        if self.X is None or self.y is None:
             self.X = np.array(X)
             self.y = np.array(y)
-            self.has_data = True
         else:
             self.X = np.vstack((self.X, X))
             self.y = np.hstack((self.y, y))
-        if self.linreg:
-            self.tree = KDTree(self.X, leaf_size=10)
-        if self.knn:
-            self.neigh.fit(self.X, self.y)
-        self.is_fit = len(self.X) > self.n_neighbors
-        # if self.is_fit:
-        #     logger.record_tabular("EVBefore", common.explained_variance(self._predict(X), y))
-        # if self.is_fit:
-        #     logger.record_tabular("EVAfter", common.explained_variance(self._predict(X), y))
 
-    def save_model(self, filename_linreg=None, filename_knn=None):
-        if filename_knn:
-            joblib.dump(self.neigh, filename_knn)
-        if filename_linreg:
-            joblib.dump(self.tree, filename_linreg)
+        self.tree = KDTree(self.X, leaf_size=10)
+        self.timestep_to_numdatapoints_dict[timesteps_so_far] = self.X.shape[0]
 
-    def load_model(self, filename_linreg=None, filename_knn=None):
-        if filename_knn:
-            self.neigh = joblib.load(filename_knn)
-        if filename_linreg:
-            self.tree = joblib.load(filename_linreg)
-        self.is_fit = True
+        if self.is_fit():
+            logger.record_tabular("EVAfter", common.explained_variance(self._predict_linreg(X), y))
 
-def pathlength(path):
-    return path["reward"].shape[0]
+    def is_fit(self):
+        return self.tree.data.shape[0] > self.n_neighbors
+
+    def save_model(self, data_filename, dict_filename):
+        joblib.dump(self.X, data_filename)
+        joblib.dump(self.timestep_to_numdatapoints_dict, dict_filename)
