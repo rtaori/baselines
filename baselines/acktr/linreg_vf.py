@@ -7,7 +7,7 @@ import tensorflow as tf
 import time
 from baselines.acktr.numpy_deque import NumpyDeque
 
-class LinearDensityValueFunction(object):
+class LinRegVF(object):
 
     def __init__(self, n_neighbors, timestep_window, ob_dim, ac_dim):
         self.n_neighbors = n_neighbors
