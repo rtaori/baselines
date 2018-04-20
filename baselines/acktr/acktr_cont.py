@@ -116,7 +116,7 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             adv_t = common.discount(delta_t, gamma * lam)
             advs.append(adv_t)
         # Update value function
-        vf.fit(paths, vtargs, timesteps_so_far)
+        vf.fit(paths, vtargs)
 
         # Build arrays for policy update
         ob_no = np.concatenate([path["observation"] for path in paths])
@@ -144,8 +144,8 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
             save_path = 'testing/{}/run{}/'.format(env_id, run_number)
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
-            saver.save(tf.get_default_session(), save_path+'pi', global_step=timesteps_so_far)
-            vf.save_model(save_path+'vf.pkl', save_path+'vf_dict.pkl')
+            saver.save(tf.get_default_session(), save_path + 'pi', global_step=timesteps_so_far)
+            vf.save(save_path + 'db', global_step=timesteps_so_far)
 
             joblib.dump(avg_vals, save_path+'avg_vals.pkl')
             joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
