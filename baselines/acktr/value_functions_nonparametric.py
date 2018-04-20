@@ -29,7 +29,7 @@ class LinearDensityValueFunction(object):
         self.X_linreg = tf.placeholder(tf.float32, shape=[None, self.n_neighbors, self.dim])
         self.y_linreg = tf.placeholder(tf.float32, shape=[None, self.n_neighbors]) 
         self.X_query_linreg = tf.placeholder(tf.float32, shape=[None, self.dim])
-        self.ridge = tf.constant(tf.eye(self.dim) * 1e-2)
+        self.ridge = tf.eye(self.dim) * 1e-2
 
         Xt_linreg = tf.transpose(self.X_linreg, [0, 2, 1])
         self.inv = tf.matrix_inverse(tf.matmul(Xt_linreg, self.X_linreg) + self.ridge)
