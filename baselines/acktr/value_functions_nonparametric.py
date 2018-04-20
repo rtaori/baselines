@@ -82,6 +82,6 @@ class LinearDensityValueFunction(object):
     def is_fit(self):
         return self.X_db.size() >= self.n_neighbors
 
-    def save(self, X_path, y_path, global_step):
-        joblib.dump(self.X_db.view(), X_path + '_X-{}.pkl'.format(global_step))
-        joblib.dump(self.y_db.view(), y_path + '_y-{}.pkl'.format(global_step))
+    def save(self, path, global_step):
+        joblib.dump(self.X_db.view(), path + '_X-{}.pkl'.format(global_step))
+        joblib.dump(self.y_db.view(), path + '_y-{}.pkl'.format(global_step))
