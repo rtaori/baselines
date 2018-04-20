@@ -62,7 +62,7 @@ class LinearDensityValueFunction(object):
 
         return y_pred
 
-    def fit(self, paths, targvals, timesteps_so_far):
+    def fit(self, paths, targvals):
         X = np.concatenate([self._preproc(p) for p in paths])
         y = np.concatenate(targvals)
 
