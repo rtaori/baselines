@@ -5,7 +5,7 @@ from sklearn.externals import joblib
 from dci import DCI
 import tensorflow as tf
 import time
-from numpy_deque import NumpyDeque
+from baselines.acktr.numpy_deque import NumpyDeque
 
 class LinearDensityValueFunction(object):
 
