@@ -51,7 +51,8 @@ class LinearDensityValueFunction(object):
         return self._predict_linreg(X_query)
 
     def _predict_linreg(self, X_query):
-        nn_idx, _ = dci_db.query(X_query, num_neighbours=self.n_neighbors, field_of_view=self.query_field_of_view, prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
+        nn_idx, _ = self.dci.query(X_query, num_neighbours=self.n_neighbors, field_of_view=self.query_field_of_view, prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
+        nn_idx = np.array(nn_idx)
         X, y = self.X[nn_idx], self.y[nn_idx]
         # X_t = X.swapaxes(1, 2)
         # inv = np.linalg.inv(X_t @ X + 1e-2 * np.eye(X.shape[2]))
@@ -76,6 +77,7 @@ class LinearDensityValueFunction(object):
             self.X = np.vstack((self.X, X))
             self.y = np.hstack((self.y, y))
 
+        self.dci = DCI(self.dim, self.num_comp_indices, self.num_simp_indices)
         self.dci.add(self.X, num_levels=self.num_levels, 
             field_of_view=self.construction_field_of_view, prop_to_retrieve=self.construction_prop_to_retrieve)
 
@@ -85,7 +87,7 @@ class LinearDensityValueFunction(object):
             logger.record_tabular("EVAfter", common.explained_variance(self._predict_linreg(X), y))
 
     def is_fit(self):
-        return self.X.shape[0] > self.n_neighbors
+        return False if self.X is None else self.X.shape[0] > self.n_neighbors
 
     def save_model(self, data_filename, dict_filename):
         joblib.dump(self.X, data_filename)
