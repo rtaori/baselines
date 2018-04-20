@@ -14,7 +14,7 @@ class LinearDensityValueFunction(object):
         self.dim = 2 * ob_dim + 2 * ac_dim + 1
 
         self.X_db = NumpyDeque(max_capacity=timestep_window)
-        self.y_db = NumpyDeque(max_capacity=timestep_window)
+        self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
 
         # prioritized DCI
         self.num_comp_indices = 2

@@ -2,10 +2,11 @@ import numpy as np
 
 class NumpyDeque(object):
 
-	def __init__(self, max_capacity):
+	def __init__(self, max_capacity, one_dimensional=False):
 		self.max_capacity = max_capacity
 		self.data = None
 		self.pointer = None
+		self.stacker = np.hstack if one_dimensional else np.vstack
 
 	def add(self, data):
 		if self.data is None:
@@ -18,7 +19,7 @@ class NumpyDeque(object):
 			input_len = data.shape[0]
 
 			if self.data.shape[0] + input_len <= self.max_capacity:
-				self.data = np.vstack((self.data, data))
+				self.data = self.stacker((self.data, data))
 
 				if self.data.shape[0] == self.max_capacity:
 					self.pointer = 0
@@ -30,7 +31,7 @@ class NumpyDeque(object):
 			else:
 				if self.pointer is None:
 					num_old_to_use = self.max_capacity - input_len
-					self.data = np.vstack((data, self.data[-num_old_to_use:]))
+					self.data = self.stacker((data, self.data[-num_old_to_use:]))
 					self.pointer = input_len
 
 				else:
