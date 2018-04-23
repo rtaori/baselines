@@ -139,7 +139,7 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
                 logger.record_tabular("value_loss", float(value_loss))
                 logger.record_tabular("explained_variance", float(ev))
                 logger.dump_tabular()
-        model.train_model.fit_vf(obs, rewards)
+        model.train_model.fit_vf(obs, rewards.flatten())
 
         ## SAVING MODELS
         if update % 50 == 0:

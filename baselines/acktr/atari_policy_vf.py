@@ -91,7 +91,7 @@ class CnnLinregPolicyVF(object):
         def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
 
-            self.X_db.add(h)
+            self.X_db.add(hhat)
             self.y_db.add(y)
 
             self.dci = DCI(self.dim, self.num_comp_indices, self.num_simp_indices)
