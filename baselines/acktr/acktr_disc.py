@@ -123,24 +123,24 @@ def learn(policy_and_vf, env, seed, total_timesteps=int(40e6), gamma=0.99, log_i
     avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
     timesteps = []
 
-    for update in range(1, total_timesteps//nbatch+1):
+    for update in range(0, total_timesteps//nbatch+1):
         obs, rewards, masks, actions, values, undiscounted_rewards = runner.run()
         if model.train_model.is_vf_fit():
             policy_loss, value_loss, policy_entropy = model.train(obs, rewards.flatten(), 
                                                 masks.flatten(), actions.flatten(), values.flatten())
-        model.old_obs = obs
-        nseconds = time.time()-tstart
-        fps = int((update*nbatch)/nseconds)
-        if update % log_interval == 0 or update == 1:
-            ev = explained_variance(values.flatten(), rewards.flatten())
-            logger.record_tabular("nupdates", update)
-            logger.record_tabular("total_timesteps", update*nbatch)
-            logger.record_tabular("fps", fps)
-            logger.record_tabular("policy_entropy", float(policy_entropy))
-            logger.record_tabular("policy_loss", float(policy_loss))
-            logger.record_tabular("value_loss", float(value_loss))
-            logger.record_tabular("explained_variance", float(ev))
-            logger.dump_tabular()
+            model.old_obs = obs
+            nseconds = time.time()-tstart
+            fps = int((update*nbatch)/nseconds)
+            if update % log_interval == 0 or update == 1:
+                ev = explained_variance(values.flatten(), rewards.flatten())
+                logger.record_tabular("nupdates", update)
+                logger.record_tabular("total_timesteps", update*nbatch)
+                logger.record_tabular("fps", fps)
+                logger.record_tabular("policy_entropy", float(policy_entropy))
+                logger.record_tabular("policy_loss", float(policy_loss))
+                logger.record_tabular("value_loss", float(value_loss))
+                logger.record_tabular("explained_variance", float(ev))
+                logger.dump_tabular()
 
         ## SAVING MODELS
         if update % 50 == 0:
