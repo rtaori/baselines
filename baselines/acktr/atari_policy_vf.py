@@ -57,9 +57,6 @@ class CnnLinregPolicyVF(object):
         a0 = self.pd.sample()
 
         def get_nearest_neighbors(h):
-            if self.X_db.size() < self.n_neighbors
-                return tf.random_normal(tf.shape(h))
-
             nn_idx, _ = self.dci.query(h, num_neighbours=self.n_neighbors, field_of_view=self.query_field_of_view,
                                         prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
 
@@ -79,12 +76,14 @@ class CnnLinregPolicyVF(object):
         vf = tf.reduce_sum(h * weights, -1)
 
         def step(ob, *_args, **_kwargs):
-            a, vf_pred = sess.run([a0, vf], {X:ob})
-            return a, vf_pred
+            if self.X_db.size() < self.n_neighbors:
+                return sess.run(a0, {X:ob}), np.random.rand(ob.shape[0])
+            return sess.run([a0, vf], {X:ob})
 
         def value(ob, *_args, **_kwargs):
-            vf_pred = sess.run(vf, {X:ob})
-            return vf_pred
+            if self.X_db.size() < self.n_neighbors:
+                return np.random.rand(ob.shape[0])
+            return sess.run(vf, {X:ob})
 
         def fit_vf(X, y):
             self.X_db.add(X)
