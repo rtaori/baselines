@@ -4,7 +4,6 @@ from baselines import logger
 from baselines.acktr.acktr_disc import learn
 from baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
-from baselines.acktr.atari_policy import CnnPolicy
 from baselines.acktr.atari_policy_vf import CnnLinregPolicyVF
 
 
