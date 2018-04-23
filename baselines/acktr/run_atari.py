@@ -10,7 +10,7 @@ from baselines.acktr.atari_policy_vf import CnnLinregPolicyVF
 def train(env_id, num_timesteps, seed, num_cpu, run_number, timestep_window, n_neighbors):
     env = VecFrameStack(make_atari_env(env_id, num_cpu, seed), 4)
     policy_fn = CnnLinregPolicyVF
-    learn(policy_fn, env, seed, total_timesteps=int(num_timesteps * 1.1), nprocs=num_cpu, 
+    learn(policy_fn, env, env_id, seed, total_timesteps=int(num_timesteps * 1.1), nprocs=num_cpu, 
             run_number=run_number, timestep_window=timestep_window, n_neighbors=n_neighbors)
     env.close()
 
