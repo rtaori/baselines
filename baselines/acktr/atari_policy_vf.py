@@ -7,6 +7,7 @@ import baselines.common as common
 from sklearn.externals import joblib
 from dci import DCI
 import os
+from baselines.acktr.numpy_deque import NumpyDeque
 
 def nature_cnn(unscaled_images):
     """
@@ -23,7 +24,7 @@ def nature_cnn(unscaled_images):
 class CnnLinregPolicyVF(object):
 
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, 
-                    timestep_window, n_neighbors, reuse=False): #pylint: disable=W0613
+                    timestep_window, n_neighbors): #pylint: disable=W0613
         nh, nw, nc = ob_space.shape
         ob_shape = (None, nh, nw, nc)
         nact = ac_space.n
@@ -46,7 +47,7 @@ class CnnLinregPolicyVF(object):
         # graph for model
         X = tf.placeholder(tf.uint8, ob_shape) #obs
 
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope("model"):
             h = nature_cnn(X)
             pi = fc(h, 'pi', nact, init_scale=0.01)
 

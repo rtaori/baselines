@@ -34,7 +34,7 @@ class Model(object):
         VF_LR = tf.placeholder(tf.float32, [])
 
         self.model2 = train_model = policy_and_vf(sess, ob_space, ac_space, 
-                                    nenvs*nsteps, nsteps, timestep_window, n_neighbors, reuse=True)
+                                    nenvs*nsteps, nsteps, timestep_window, n_neighbors)
 
         logpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         self.logits = logits = train_model.pi
