@@ -82,8 +82,8 @@ class CnnLinregPolicyVF(object):
         vf = tf.reduce_sum(h * weights, -1)
 
         def step(ob, *_args, **_kwargs):
-            a = sess.run(a0, {X:ob})
-            return a
+            a, vf_pred = sess.run([a0, vf], {X:ob})
+            return a, vf_pred
 
         def value(ob, *_args, **_kwargs):
             vf_pred = sess.run(vf, {X:ob})
