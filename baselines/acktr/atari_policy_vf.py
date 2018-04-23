@@ -56,12 +56,9 @@ class CnnLinregPolicyVF(object):
 
         a0 = self.pd.sample()
 
-        def is_vf_fit():
-            return self.X_db.size() >= self.n_neighbors
-
         def get_nearest_neighbors(h):
-            if not self.is_fit():
-                return np.random.rand(tf.shape(h)[0])
+            if self.X_db.size() < self.n_neighbors
+                return tf.random_normal(tf.shape(h))
 
             nn_idx, _ = self.dci.query(h, num_neighbours=self.n_neighbors, field_of_view=self.query_field_of_view,
                                         prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
