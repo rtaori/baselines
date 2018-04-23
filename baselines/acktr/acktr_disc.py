@@ -19,7 +19,7 @@ class Model(object):
 
     def __init__(self, policy_and_vf, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
-                 kfac_clip=0.001, lrschedule='linear', timestep_window, n_neighbors):
+                 kfac_clip=0.001, lrschedule='linear', timestep_window=None, n_neighbors=None):
         config = tf.ConfigProto(allow_soft_placement=True,
                                 intra_op_parallelism_threads=nprocs,
                                 inter_op_parallelism_threads=nprocs)
@@ -97,7 +97,7 @@ class Model(object):
 
 def learn(policy_and_vf, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, nsteps=20,
             ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5, kfac_clip=0.001, 
-            save_interval=None, lrschedule='linear', run_number, timestep_window, n_neighbors):
+            save_interval=None, lrschedule='linear', run_number=None, timestep_window=None, n_neighbors=None):
     tf.reset_default_graph()
     set_global_seeds(seed)
 
