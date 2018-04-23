@@ -88,9 +88,7 @@ class Model(object):
 
         self.train = train
         self.save = save
-        self.load = load
         self.train_model = train_model
-        self.step_model = step_model
         self.step = train_model.step
         self.value = train_model.value
         tf.global_variables_initializer().run(session=sess)

@@ -14,7 +14,6 @@ class Runner(object):
         obs = env.reset()
         self.gamma = gamma
         self.nsteps = nsteps
-        self.states = model.initial_state
         self.dones = [False for _ in range(nenv)]
 
     def run(self):
@@ -41,7 +40,7 @@ class Runner(object):
         mb_dones = np.asarray(mb_dones, dtype=np.bool).swapaxes(1, 0)
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
-        last_values = self.model.value(self.obs, self.states, self.dones).tolist()
+        last_values = self.model.value(self.obs, self.dones).tolist()
         undiscounted_rewards = mb_rewards.copy()
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
