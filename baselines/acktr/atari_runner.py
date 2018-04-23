@@ -51,4 +51,4 @@ class Runner(object):
             else:
                 rewards = discount_with_dones(rewards, dones, self.gamma)
             mb_rewards[n] = rewards
-        return mb_obs, mb_states, mb_rewards, mb_masks, mb_actions, mb_values, undiscounted_rewards
+        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, undiscounted_rewards
