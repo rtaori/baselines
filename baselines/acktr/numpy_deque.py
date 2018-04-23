@@ -9,6 +9,8 @@ class NumpyDeque(object):
 		self.stacker = np.hstack if one_dimensional else np.vstack
 
 	def add(self, data):
+		data = data.astype(np.float64)
+
 		if self.data is None:
 			self.data = data[-self.max_capacity:]
 
