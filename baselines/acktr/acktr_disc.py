@@ -79,8 +79,6 @@ class Model(object):
                 td_map
             )
 
-            self.model.fit_vf(obs, rewards)
-
             return policy_loss, value_loss, policy_entropy
 
         def save(save_path, global_step):
@@ -141,6 +139,7 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
                 logger.record_tabular("value_loss", float(value_loss))
                 logger.record_tabular("explained_variance", float(ev))
                 logger.dump_tabular()
+        model.train_model.fit_vf(obs, rewards)
 
         ## SAVING MODELS
         if update % 50 == 0:
