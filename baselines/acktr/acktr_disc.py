@@ -123,7 +123,7 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
     avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
     timesteps = []
 
-    for update in range(0, total_timesteps//nbatch+1):
+    for update in range(-1, total_timesteps//nbatch+1):
         obs, rewards, masks, actions, values, undiscounted_rewards = runner.run()
         if model.train_model.is_vf_fit():
             policy_loss, value_loss, policy_entropy = model.train(obs, rewards.flatten(), 
