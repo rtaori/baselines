@@ -64,9 +64,9 @@ class CnnLinregPolicyVF(object):
                                         prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
 
             nn_idx = np.array(nn_idx)
-            X, y = self.X_db.view()[nn_idx], self.y_db.view()[nn_idx]
+            X_linreg, y_linreg = self.X_db.view()[nn_idx], self.y_db.view()[nn_idx]
 
-            return X, y
+            return X_linreg, y_linreg
 
         # define the graph for linear regression
         X_linreg, y_linreg = tf.py_func(get_nearest_neighbors, [h], [tf.float32, tf.float32])
@@ -88,7 +88,7 @@ class CnnLinregPolicyVF(object):
                 return np.random.rand(ob.shape[0])
             return sess.run(vf, {X:ob})
 
-        def fit_vf(X, y):
+        def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
 
             self.X_db.add(h)
