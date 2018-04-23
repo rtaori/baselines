@@ -104,13 +104,13 @@ class CnnLinregPolicyVF(object):
         self.fit_vf = fit_vf
         self.is_vf_fit = is_vf_fit
 
-        saver = tf.train.Saver(max_to_keep=150)
+        saver = tf.train.Saver(max_to_keep=350)
 
         def save(path, global_step):
             if not os.path.exists(path):
                 os.makedirs(path)
             joblib.dump(self.X_db.view(), path + 'vf_X-{}.pkl'.format(global_step))
             joblib.dump(self.y_db.view(), path + 'vf_y-{}.pkl'.format(global_step))
-            saver.save(tf.get_default_session(), path + 'pi', global_step=global_step)
+            saver.save(sess, path + 'pi', global_step=global_step)
 
         self.save = save
