@@ -69,7 +69,7 @@ class CnnLinregPolicyVF(object):
             return X_linreg, y_linreg
 
         # define the graph for linear regression
-        X_linreg, y_linreg = tf.py_func(get_nearest_neighbors, [h], [tf.float32, tf.float32])
+        X_linreg, y_linreg = tf.py_func(get_nearest_neighbors, [h], [tf.float64, tf.float64])
         ridge = tf.eye(self.dim) * 1e-2
 
         Xt_linreg = tf.transpose(X_linreg, [0, 2, 1])
