@@ -127,7 +127,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
     for update in range(total_timesteps//nbatch+1):
 
-        obs, rewards, masks, actions, values, undiscounted_rewards = runner[0].run()
+        obs, rewards, masks, actions, values, undiscounted_rewards = runners[0].run()
         for i in range(1, len(runners)):
             obs_, rewards_, masks_, actions_, values_, undiscounted_rewards_ = runners[i].run()
             obs = np.concatenate([obs, obs_])
