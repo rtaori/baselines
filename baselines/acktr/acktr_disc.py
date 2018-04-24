@@ -101,7 +101,7 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
     tf.reset_default_graph()
     set_global_seeds(seed)
 
-    nenvs = env.num_envs
+    nenvs = num_processes * envs_per_process
     ob_space = env.observation_space
     ac_space = env.action_space
     make_model = lambda : Model(policy_and_vf, ob_space, ac_space, nenvs, total_timesteps, 
