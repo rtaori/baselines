@@ -102,8 +102,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     set_global_seeds(seed)
 
     nenvs = num_processes * envs_per_process
-    ob_space = env[0].observation_space
-    ac_space = env[0].action_space
+    ob_space = envs[0].observation_space
+    ac_space = envs[0].action_space
     make_model = lambda : Model(policy_and_vf, ob_space, ac_space, nenvs, total_timesteps, 
                                 num_processes=num_processes, envs_per_process=envs_per_process,
                                 nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=vf_fisher_coef, 
