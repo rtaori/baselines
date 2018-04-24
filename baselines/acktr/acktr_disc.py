@@ -17,12 +17,13 @@ import matplotlib.pyplot as plt
 
 class Model(object):
 
-    def __init__(self, policy_and_vf, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
+    def __init__(self, policy_and_vf, ob_space, ac_space, nenvs,total_timesteps, num_processes=2, 
+                envs_per_process=2, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, lrschedule='linear', timestep_window=None, n_neighbors=None):
         config = tf.ConfigProto(allow_soft_placement=True,
-                                intra_op_parallelism_threads=nprocs,
-                                inter_op_parallelism_threads=nprocs)
+                                intra_op_parallelism_threads=1,
+                                inter_op_parallelism_threads=num_processes)
         config.gpu_options.allow_growth = True
         self.sess = sess = tf.Session(config=config)
         nact = ac_space.n
@@ -93,7 +94,8 @@ class Model(object):
         self.value = train_model.value
         tf.global_variables_initializer().run(session=sess)
 
-def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, 
+def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, 
+            num_processes=2, envs_per_process=2,
           nsteps=20, ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5, kfac_clip=0.001, 
           save_interval=None, lrschedule='linear', run_number=None, timestep_window=None, n_neighbors=None):
     tf.reset_default_graph()
@@ -102,7 +104,8 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
     nenvs = env.num_envs
     ob_space = env.observation_space
     ac_space = env.action_space
-    make_model = lambda : Model(policy_and_vf, ob_space, ac_space, nenvs, total_timesteps, nprocs=nprocs, 
+    make_model = lambda : Model(policy_and_vf, ob_space, ac_space, nenvs, total_timesteps, 
+                                num_processes=num_processes, envs_per_process=envs_per_process,
                                 nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=vf_fisher_coef, 
                                 lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip, lrschedule=lrschedule, 
                                 timestep_window=timestep_window, n_neighbors=n_neighbors)
@@ -123,7 +126,16 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
     timesteps = []
 
     for update in range(total_timesteps//nbatch+1):
+
         obs, rewards, masks, actions, values, undiscounted_rewards = runner.run()
+        for i in range(envs_per_process-1):
+            obs_, rewards_, masks_, actions_, values_, undiscounted_rewards_ = runner.run()
+            obs = np.concatenate([obs, obs_])
+            rewards = np.concatenate([rewards, rewards_])
+            masks = np.concatenate([masks, masks_])
+            actions = np.concatenate([actions, actions_])
+            values = np.concatenate([values, values_])
+            undiscounted_rewards = np.concatenate([undiscounted_rewards, undiscounted_rewards_])
 
         model.train_model.fit_vf(obs, rewards.flatten())
 
