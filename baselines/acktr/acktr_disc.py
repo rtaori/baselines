@@ -33,6 +33,8 @@ class Model(object):
         PG_LR = tf.placeholder(tf.float32, [])
         VF_LR = tf.placeholder(tf.float32, [])
 
+        vf_coef = 0.0
+
         self.model2 = train_model = policy_and_vf(sess, ob_space, ac_space, 
                                     nenvs*nsteps, nsteps, timestep_window, n_neighbors)
 
@@ -110,7 +112,6 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
             fh.write(cloudpickle.dumps(make_model))
     model = make_model()
 
-
     runner = Runner(env, model, nsteps=nsteps, gamma=gamma)
     nbatch = nenvs*nsteps
     tstart = time.time()
@@ -123,6 +124,7 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
 
     for update in range(-1, total_timesteps//nbatch+1):
         obs, rewards, masks, actions, values, undiscounted_rewards = runner.run()
+
         if model.train_model.is_vf_fit():
             policy_loss, value_loss, policy_entropy = model.train(obs, rewards.flatten(), 
                                                 masks.flatten(), actions.flatten(), values.flatten())
@@ -142,34 +144,32 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
         model.train_model.fit_vf(obs, rewards.flatten())
 
         ## SAVING MODELS
+        avg_val = undiscounted_rewards[:, 0].mean()
+        avg_val_discounted = rewards[:, 4].mean()
+        est_val_linreg = values[:, 4].mean()
+        avg_vals.append(avg_val)
+        avg_vals_discounted.append(avg_val_discounted)
+        est_vals_linreg.append(est_val_linreg)
+        timesteps.append(update*nbatch)
+
+        joblib.dump(avg_vals, save_path+'avg_vals.pkl')
+        joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
+        joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
+        joblib.dump(timesteps, save_path+'timesteps.pkl')
+
+        plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
+        plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
+        plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='blue', linestyle='dashed')
+        plt.title('Reward estimation for {}'.format(env_id))
+        plt.xlabel('Number of timesteps')
+        plt.ylabel('Reward')
+        plt.legend()
+        plt.savefig(save_path + 'plot.png')
+        plt.close()
+
         if update % 50 == 0:
-            obs, rewards, masks, actions, values, undiscounted_rewards = runner.run()
-
-            avg_val = undiscounted_rewards[:, 0].mean()
-            avg_val_discounted = rewards[:, 4].mean()
-            est_val_linreg = values[:, 4].mean()
-            avg_vals.append(avg_val)
-            avg_vals_discounted.append(avg_val_discounted)
-            est_vals_linreg.append(est_val_linreg)
-            timesteps.append(update*nbatch)
-
             save_path = 'testing/{}/run{}/'.format(env_id, run_number)
             model.save(save_path, timesteps[-1])
-
-            joblib.dump(avg_vals, save_path+'avg_vals.pkl')
-            joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
-            joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
-            joblib.dump(timesteps, save_path+'timesteps.pkl')
-
-            plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
-            plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
-            plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='blue', linestyle='dashed')
-            plt.title('Reward estimation for {}'.format(env_id))
-            plt.xlabel('Number of timesteps')
-            plt.ylabel('Reward')
-            plt.legend()
-            plt.savefig(save_path + 'plot.png')
-            plt.close()
 
     coord.request_stop()
     coord.join(enqueue_threads)
