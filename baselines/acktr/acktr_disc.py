@@ -144,6 +144,10 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
         model.train_model.fit_vf(obs, rewards.flatten())
 
         ## SAVING MODELS
+        save_path = 'testing/{}/run{}/'.format(env_id, run_number)
+        if update % 50 == 0:
+            model.save(save_path, timesteps[-1])
+
         avg_val = undiscounted_rewards[:, 0].mean()
         avg_val_discounted = rewards[:, 4].mean()
         est_val_linreg = values[:, 4].mean()
@@ -166,10 +170,6 @@ def learn(policy_and_vf, env, env_id, seed, total_timesteps=int(40e6), gamma=0.9
         plt.legend()
         plt.savefig(save_path + 'plot.png')
         plt.close()
-
-        if update % 50 == 0:
-            save_path = 'testing/{}/run{}/'.format(env_id, run_number)
-            model.save(save_path, timesteps[-1])
 
     coord.request_stop()
     coord.join(enqueue_threads)
