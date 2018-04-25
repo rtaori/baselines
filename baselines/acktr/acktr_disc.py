@@ -160,7 +160,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         if update % 50 == 0:
             model.save(save_path, update*nbatch)
 
-        avg_val = undiscounted_rewards[:, 0].mean()
+        avg_val = undiscounted_rewards.sum(axis=1).mean()
         avg_val_discounted = rewards[:, 4].mean()
         est_val_linreg = values[:, 4].mean()
         avg_vals.append(avg_val)
