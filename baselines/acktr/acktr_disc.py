@@ -109,6 +109,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
                                 nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=vf_fisher_coef, 
                                 lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip, lrschedule=lrschedule, 
                                 timestep_window=timestep_window, n_neighbors=n_neighbors)
+
+    logger.configure(dir='baselines/testing/{}/run{}/log.csv'.format(env_id, run_number))
     if save_interval and logger.get_dir():
         import cloudpickle
         with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
