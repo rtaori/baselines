@@ -116,7 +116,6 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     model = make_model()
 
     runners = [Runner(env, model, nsteps=nsteps, gamma=gamma) for env in envs]
-    print('len runners', len(runners))
     nbatch = nenvs*nsteps
     tstart = time.time()
     coord = tf.train.Coordinator()
