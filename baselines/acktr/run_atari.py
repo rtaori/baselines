@@ -16,6 +16,8 @@ def train(env_id, num_timesteps, seed, num_processes, envs_per_process, run_numb
     env.close()
 
 def main():
+    input()
+
     args = atari_arg_parser().parse_args()
     logger.configure()
 

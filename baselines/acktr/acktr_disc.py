@@ -116,6 +116,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     model = make_model()
 
     runners = [Runner(env, model, nsteps=nsteps, gamma=gamma) for env in envs]
+    print('len runners', len(runners))
     nbatch = nenvs*nsteps
     tstart = time.time()
     coord = tf.train.Coordinator()
@@ -127,15 +128,15 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
     for update in range(total_timesteps//nbatch+1):
 
-        obs, rewards, masks, actions, values, undiscounted_rewards = runners[0].run()
+        obs, rewards, masks, actions, values, summed_rewards = runners[0].run()
         for i in range(1, len(runners)):
-            obs_, rewards_, masks_, actions_, values_, undiscounted_rewards_ = runners[i].run()
+            obs_, rewards_, masks_, actions_, values_, summed_rewards_ = runners[i].run()
             obs = np.concatenate([obs, obs_])
             rewards = np.concatenate([rewards, rewards_])
             masks = np.concatenate([masks, masks_])
             actions = np.concatenate([actions, actions_])
             values = np.concatenate([values, values_])
-            undiscounted_rewards = np.concatenate([undiscounted_rewards, undiscounted_rewards_])
+            summed_rewards.extend(summed_rewards_)
 
         model.train_model.fit_vf(obs, rewards.flatten())
 
@@ -160,7 +161,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         if update % 50 == 0:
             model.save(save_path, update*nbatch)
 
-        avg_val = undiscounted_rewards.sum(axis=1).mean()
+        avg_val = np.mean(summed_rewards)
         avg_val_discounted = rewards[:, 4].mean()
         est_val_linreg = values[:, 4].mean()
         avg_vals.append(avg_val)

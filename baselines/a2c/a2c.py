@@ -134,7 +134,7 @@ class Runner(object):
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
         last_values = self.model.get_values(self.obs).tolist()
-        undiscounted_rewards = mb_rewards.copy()
+        undiscounted_rewards = np.append(mb_rewards.copy(), np.array(last_values).reshape((-1, 1)), axis=1)
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             rewards = rewards.tolist()

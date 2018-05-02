@@ -41,14 +41,15 @@ class Runner(object):
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
         last_values = self.model.value(self.obs, self.dones).tolist()
-        undiscounted_rewards = mb_rewards.copy()
+        summed_rewards = []
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
-            rewards = rewards.tolist()
             dones = dones.tolist()
             if dones[-1] == 0:
-                rewards = discount_with_dones(rewards+[value], dones+[0], self.gamma)[:-1]
+                summed_rewards.append(rewards.sum() + value)
+                rewards = discount_with_dones(rewards.tolist()+[value], dones+[0], self.gamma)[:-1]
             else:
-                rewards = discount_with_dones(rewards, dones, self.gamma)
+                summed_rewards.append(rewards.sum())
+                rewards = discount_with_dones(rewards.tolist(), dones, self.gamma)
             mb_rewards[n] = rewards
-        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, undiscounted_rewards
+        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, summed_rewards
