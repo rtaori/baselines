@@ -49,7 +49,6 @@ class CnnLinregPolicyVF(object):
 
         with tf.variable_scope("model"):
             h = nature_cnn(X)
-            h = tf.Print(h, [h], summarize=1e10)
             pi = fc(h, 'pi', nact, init_scale=0.01)
 
         self.pdtype = make_pdtype(ac_space)

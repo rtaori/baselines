@@ -35,7 +35,7 @@ SRC_DIR=src
 INCL_DIR=include
 BUILD_DIR=build
 
-GEN_FLAGS=-Wall -O3 -std=gnu99 -m64 -fopenmp -flto
+GEN_FLAGS=-Wall -O3 -std=gnu99 -m64 -flto  # -fopenmp 
 LIB_FLAGS=-lm
 
 OBJ_FILES=dci.o util.o
