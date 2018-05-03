@@ -116,3 +116,10 @@ class CnnLinregPolicyVF(object):
             saver.save(sess, path + 'pi', global_step=global_step)
 
         self.save = save
+
+        self.h = h
+
+        def get_last_activations(obs):
+            return sess.run(h, {X:ob})
+
+        self.get_last_activations = get_last_activations

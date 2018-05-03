@@ -92,6 +92,8 @@ class Model(object):
         self.train_model = train_model
         self.step = train_model.step
         self.value = train_model.value
+        self.get_last_activations = train_model.get_last_activations
+
         tf.global_variables_initializer().run(session=sess)
 
 def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, 
@@ -161,6 +163,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         save_path = 'testing/{}/run{}/'.format(env_id, run_number)
         if update % 50 == 0:
             model.save(save_path, update*nbatch)
+            final_activations = model.get_final_activations(obs)
+            joblib.dump(final_activations, save_path+'h-{}.pkl'.format(update*nbatch))
 
         avg_val = np.mean(summed_rewards)
         avg_val_discounted = rewards[:, 4].mean()
