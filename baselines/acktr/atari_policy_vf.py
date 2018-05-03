@@ -120,6 +120,6 @@ class CnnLinregPolicyVF(object):
         self.h = h
 
         def get_last_activations(obs):
-            return sess.run(h, {X:ob})
+            return sess.run(h, {X:obs})
 
         self.get_last_activations = get_last_activations
