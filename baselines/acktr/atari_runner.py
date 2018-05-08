@@ -44,7 +44,7 @@ class Runner(object):
         last_values = self.model.value(self.obs, self.dones).tolist()
         summed_rewards = []
         #discount/bootstrap off value fn
-        for n, (rewards, dones, value, true_reward) in enumerate(zip(mb_rewards, mb_dones, last_values)):
+        for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             dones = dones.tolist()
             if dones[-1] == 0:
                 summed_rewards.append(rewards.sum() + value)
