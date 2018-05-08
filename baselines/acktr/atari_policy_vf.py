@@ -4,7 +4,7 @@ from baselines.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch
 from baselines.common.distributions import make_pdtype
 from baselines import logger
 import baselines.common as common
-from sklearn.externals import joblib
+import joblib
 from dci import DCI
 import os
 from baselines.acktr.numpy_deque import NumpyDeque
