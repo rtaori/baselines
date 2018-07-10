@@ -25,7 +25,7 @@ class Runner(object):
             mb_values.append(values)
             mb_dones.append(self.dones)
             obs, rewards, dones, _ = self.env.step(actions)
-            rewards = 500 * np.tanh(rewards / 500)
+            # rewards = 500 * np.tanh(rewards / 500)
             self.dones = dones
             for n, done in enumerate(dones):
                 if done:
