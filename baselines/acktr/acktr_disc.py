@@ -145,7 +145,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             policy_loss, value_loss, policy_entropy = model.train(obs, 
                 rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
         model.train_model.fit_vf(obs, rewards.flatten())
-        
+
         model.old_obs = obs
         nseconds = time.time()-tstart
         fps = int((update*nbatch)/nseconds)
@@ -154,9 +154,10 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             logger.record_tabular("nupdates", update)
             logger.record_tabular("total_timesteps", update*nbatch)
             logger.record_tabular("fps", fps)
-            logger.record_tabular("policy_entropy", float(policy_entropy))
-            logger.record_tabular("policy_loss", float(policy_loss))
-            logger.record_tabular("value_loss", float(value_loss))
+            if model.train_model.is_vf_fit():
+                logger.record_tabular("policy_entropy", float(policy_entropy))
+                logger.record_tabular("policy_loss", float(policy_loss))
+                logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
         
