@@ -141,7 +141,9 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
 
+        flag = False
         if model.train_model.is_vf_fit():
+            flag = True
             policy_loss, value_loss, policy_entropy = model.train(obs, 
                 rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
         model.train_model.fit_vf(obs, rewards.flatten())
@@ -154,7 +156,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             logger.record_tabular("nupdates", update)
             logger.record_tabular("total_timesteps", update*nbatch)
             logger.record_tabular("fps", fps)
-            if model.train_model.is_vf_fit():
+            if flag:
                 logger.record_tabular("policy_entropy", float(policy_entropy))
                 logger.record_tabular("policy_loss", float(policy_loss))
                 logger.record_tabular("value_loss", float(value_loss))
