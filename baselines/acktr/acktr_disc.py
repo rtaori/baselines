@@ -157,7 +157,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             logger.dump_tabular()
         
         ## SAVING MODELS
-        save_path = 'testing/{}/run{}/'.format(env_id, run_number)
+        save_path = 'testing/{}/run_orig{}/'.format(env_id, run_number)
         if update % 50 == 0:
             model.save(save_path, update*nbatch)
             final_activations = model.get_last_activations(obs)
