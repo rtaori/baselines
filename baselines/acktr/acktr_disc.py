@@ -141,10 +141,11 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
 
+        if model.train_model.is_vf_fit():
+            policy_loss, value_loss, policy_entropy = model.train(obs, 
+                rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
         model.train_model.fit_vf(obs, rewards.flatten())
-
-        policy_loss, value_loss, policy_entropy = model.train(obs, rewards.flatten(), 
-                                            masks.flatten(), actions.flatten(), values.flatten())
+        
         model.old_obs = obs
         nseconds = time.time()-tstart
         fps = int((update*nbatch)/nseconds)
