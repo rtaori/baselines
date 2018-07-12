@@ -20,7 +20,7 @@ class Model(object):
     def __init__(self, policy_and_vf, ob_space, ac_space, nenvs,total_timesteps, num_processes=2, 
                 envs_per_process=2, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
-                 kfac_clip=0.001, lrschedule='linear', timestep_window=None, n_neighbors=None):
+                 kfac_clip=0.001, lrschedule='linear'):
         config = tf.ConfigProto(allow_soft_placement=True,
                                 intra_op_parallelism_threads=1,
                                 inter_op_parallelism_threads=num_processes)
@@ -96,7 +96,7 @@ class Model(object):
 def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, 
             num_processes=2, envs_per_process=2,
           nsteps=20, ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5, kfac_clip=0.001, 
-          save_interval=None, lrschedule='linear', run_number=None, timestep_window=None, n_neighbors=None):
+          save_interval=None, lrschedule='linear', run_number=None):
     tf.reset_default_graph()
     set_global_seeds(seed)
 
@@ -106,8 +106,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     make_model = lambda : Model(policy_and_vf, ob_space, ac_space, nenvs, total_timesteps, 
                                 num_processes=num_processes, envs_per_process=envs_per_process,
                                 nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=vf_fisher_coef, 
-                                lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip, lrschedule=lrschedule, 
-                                timestep_window=timestep_window, n_neighbors=n_neighbors)
+                                lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip, lrschedule=lrschedule)
 
     logger.configure(dir='baselines/testing/{}/run{}/log.csv'.format(env_id, run_number))
     if save_interval and logger.get_dir():

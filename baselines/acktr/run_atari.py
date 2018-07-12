@@ -7,7 +7,7 @@ from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.ppo2.policies import CnnPolicy
 
 
-def train(env_id, num_timesteps, seed, num_processes, envs_per_process, run_number, timestep_window, n_neighbors):
+def train(env_id, num_timesteps, seed, num_processes, envs_per_process, run_number):
     envs = [VecFrameStack(make_atari_env(env_id, num_processes, seed), 4) for _ in range(envs_per_process)]
     policy_fn = partial(CnnPolicy, one_dim_bias=True)
     learn(policy_fn, envs, env_id, seed, total_timesteps=int(num_timesteps * 1.1), num_processes=num_processes, 
