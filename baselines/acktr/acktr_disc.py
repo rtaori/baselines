@@ -34,8 +34,6 @@ class Model(object):
         PG_LR = tf.placeholder(tf.float32, [])
         VF_LR = tf.placeholder(tf.float32, [])
 
-        vf_coef = 0.0
-
         self.model2 = train_model = policy_and_vf(sess, ob_space, ac_space, 
                                     nenvs*nsteps, nsteps, timestep_window, n_neighbors)
 
@@ -47,14 +45,14 @@ class Model(object):
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         pg_loss = pg_loss - ent_coef * entropy
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
-        train_loss = pg_loss # + vf_coef * vf_loss
+        train_loss = pg_loss + vf_coef * vf_loss
 
         ##Fisher loss construction
         self.pg_fisher = pg_fisher_loss = -tf.reduce_mean(logpac)
         sample_net = train_model.vf + tf.random_normal(tf.shape(train_model.vf))
         self.vf_fisher = vf_fisher_loss = - vf_fisher_coef*tf.reduce_mean(
                             tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
-        self.joint_fisher = joint_fisher_loss = pg_fisher_loss # + vf_fisher_loss
+        self.joint_fisher = joint_fisher_loss = pg_fisher_loss + vf_fisher_loss
 
         self.params=params = find_trainable_variables("model")
 
@@ -92,7 +90,6 @@ class Model(object):
         self.train_model = train_model
         self.step = train_model.step
         self.value = train_model.value
-        self.get_last_activations = train_model.get_last_activations
 
         tf.global_variables_initializer().run(session=sess)
 
