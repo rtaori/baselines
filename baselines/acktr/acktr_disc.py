@@ -1,4 +1,5 @@
 import os.path as osp
+import os
 import time
 import joblib
 import numpy as np
@@ -136,7 +137,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             actions = np.concatenate([actions, actions_])
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
-            
+
         policy_loss, value_loss, policy_entropy = model.train(obs, rewards.flatten(), 
                                             masks.flatten(), actions.flatten(), values.flatten())
         model.old_obs = obs
@@ -155,6 +156,9 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         
         ## SAVING MODELS
         save_path = 'testing/{}/run_orig{}/'.format(env_id, run_number)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
         # if update % 50 == 0:
         #     model.save(save_path, update*nbatch)
         #     final_activations = model.get_last_activations(obs)
@@ -167,6 +171,12 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         avg_vals_discounted.append(avg_val_discounted)
         est_vals_linreg.append(est_val_linreg)
         timesteps.append(update*nbatch)
+
+        joblib.dump(obs, save_path+'obs-{}.pkl'.format(update*nbatch))
+        joblib.dump(rewards, save_path+'rewards-{}.pkl'.format(update*nbatch))
+        joblib.dump(actions, save_path+'actions-{}.pkl'.format(update*nbatch))
+        joblib.dump(values, save_path+'values-{}.pkl'.format(update*nbatch))
+        joblib.dump(summed_rewards, save_path+'summed_rewards-{}.pkl'.format(update*nbatch))
 
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
