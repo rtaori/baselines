@@ -140,7 +140,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             actions = np.concatenate([actions, actions_])
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
-            mb_rewards.extend(mb_rewards_)
+            mb_rewards = np.concatenate([mb_rewards, mb_rewards_])
             last_values.extend(last_values_)
             last_obs.extend(last_obs_)
 
