@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from baselines import logger
+from functools import partial
 from baselines.acktr.acktr_disc import learn
 from baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
