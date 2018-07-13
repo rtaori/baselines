@@ -101,7 +101,7 @@ class CnnPolicy(object):
 
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, reuse=False): #pylint: disable=W0613
         nh, nw, nc = ob_space.shape
-        ob_shape = (nbatch, nh, nw, nc)
+        ob_shape = (None, nh, nw, nc)
         nact = ac_space.n
         X = tf.placeholder(tf.uint8, ob_shape) #obs
         with tf.variable_scope("model", reuse=reuse):
