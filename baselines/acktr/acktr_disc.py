@@ -131,15 +131,18 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
     for update in range(total_timesteps//nbatch+1):
 
-        obs, rewards, masks, actions, values, summed_rewards = runners[0].run()
+        obs, rewards, masks, actions, values, summed_rewards, mb_rewards, last_values, last_obs = runners[0].run()
         for i in range(1, len(runners)):
-            obs_, rewards_, masks_, actions_, values_, summed_rewards_ = runners[i].run()
+            obs_, rewards_, masks_, actions_, values_, summed_rewards_, mb_rewards_, last_values_, last_obs_ = runners[i].run()
             obs = np.concatenate([obs, obs_])
             rewards = np.concatenate([rewards, rewards_])
             masks = np.concatenate([masks, masks_])
             actions = np.concatenate([actions, actions_])
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
+            mb_rewards.extend(mb_rewards_)
+            last_values.extend(last_values_)
+            last_obs.extend(last_obs_)
 
         flag = False
         if model.train_model.is_vf_fit():
@@ -182,6 +185,9 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         joblib.dump(actions, save_path+'actions-{}.pkl'.format(update*nbatch))
         joblib.dump(values, save_path+'values-{}.pkl'.format(update*nbatch))
         joblib.dump(summed_rewards, save_path+'summed_rewards-{}.pkl'.format(update*nbatch))
+        joblib.dump(mb_rewards, save_path+'mb_rewards-{}.pkl'.format(update*nbatch))
+        joblib.dump(last_values, save_path+'last_values-{}.pkl'.format(update*nbatch))
+        joblib.dump(last_obs, save_path+'last_obs-{}.pkl'.format(update*nbatch))
 
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')

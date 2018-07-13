@@ -36,6 +36,7 @@ class Runner(object):
         #batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=np.uint8).swapaxes(1, 0).reshape(self.batch_ob_shape)
         mb_rewards = np.asarray(mb_rewards, dtype=np.float32).swapaxes(1, 0)
+        mb_mb_rewards = mb_rewards.copy()
         mb_actions = np.asarray(mb_actions, dtype=np.int32).swapaxes(1, 0)
         mb_values = np.asarray(mb_values, dtype=np.float32).swapaxes(1, 0)
         mb_dones = np.asarray(mb_dones, dtype=np.bool).swapaxes(1, 0)
@@ -53,4 +54,4 @@ class Runner(object):
                 summed_rewards.append(rewards.sum())
                 rewards = discount_with_dones(rewards.tolist(), dones, self.gamma)
             mb_rewards[n] = rewards
-        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, summed_rewards
+        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, summed_rewards, mb_mb_rewards, last_values, self.obs
