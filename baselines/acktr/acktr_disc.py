@@ -155,10 +155,10 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         
         ## SAVING MODELS
         save_path = 'testing/{}/run_orig{}/'.format(env_id, run_number)
-        if update % 50 == 0:
-            model.save(save_path, update*nbatch)
-            final_activations = model.get_last_activations(obs)
-            joblib.dump(final_activations, save_path+'h-{}.pkl'.format(update*nbatch))
+        # if update % 50 == 0:
+        #     model.save(save_path, update*nbatch)
+        #     final_activations = model.get_last_activations(obs)
+        #     joblib.dump(final_activations, save_path+'h-{}.pkl'.format(update*nbatch))
 
         avg_val = np.mean(summed_rewards)
         avg_val_discounted = rewards[:, 0].mean()
