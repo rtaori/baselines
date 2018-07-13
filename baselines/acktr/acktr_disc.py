@@ -141,8 +141,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             values = np.concatenate([values, values_])
             summed_rewards.extend(summed_rewards_)
             mb_rewards = np.concatenate([mb_rewards, mb_rewards_])
-            last_values.extend(last_values_)
-            last_obs.extend(last_obs_)
+            last_values = np.concatenate([last_values, last_values_])
+            last_obs = np.concatenate([last_obs, last_obs_])
 
         flag = False
         if model.train_model.is_vf_fit():
