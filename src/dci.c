@@ -569,11 +569,16 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
     if (query_config.blind) {
         max_num_points_to_expand += dci_inst->num_comp_indices-1;
     }
-    idx_elem points_to_expand[max_num_points_to_expand*max_num_points_to_expand];
-    idx_elem points_to_expand_next[max_num_points_to_expand*max_num_points_to_expand];
     
-    int top_level_counts[dci_inst->num_comp_indices*dci_inst->num_coarse_points];
-    double top_level_candidate_dists[dci_inst->num_coarse_points];
+    idx_elem *points_to_expand, *points_to_expand_next;
+    points_to_expand = (idx_elem *)malloc(sizeof(idx_elem)*max_num_points_to_expand*max_num_points_to_expand);
+    points_to_expand_next = (idx_elem *)malloc(sizeof(idx_elem)*max_num_points_to_expand*max_num_points_to_expand);
+    
+    int *top_level_counts;
+    top_level_counts = (int *)malloc(sizeof(int)*dci_inst->num_comp_indices*dci_inst->num_coarse_points);
+    
+    double *top_level_candidate_dists;
+    top_level_candidate_dists = (double *)malloc(sizeof(double)*dci_inst->num_coarse_points);
     
     // Only used when non-blind querying is used
     double top_level_farthest_dists[dci_inst->num_comp_indices];
@@ -585,7 +590,8 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
     int top_level_cur_point_local_ids[num_indices];     // Point at the current location in each index
     int top_level_cur_point_global_ids[num_indices];    // Point at the current location in each index
     
-    int num_top_candidates[max_num_points_to_expand];
+    int *num_top_candidates;
+    num_top_candidates = (int *)malloc(sizeof(int)*max_num_points_to_expand);
     
     int total_num_top_candidates, num_finest_level_points_to_expand;
     
@@ -600,6 +606,9 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
         query_config.min_num_finest_level_points = 0;
         
         num_points_to_expand = dci_query_single_point_single_level(dci_inst, dci_inst->indices[dci_inst->num_levels - 1], dci_inst->num_coarse_points, num_neighbours, query, query_proj, query_config, NULL, points_to_expand_next, top_level_index_priority, top_level_left_pos, top_level_right_pos, top_level_cur_point_local_ids, top_level_cur_point_global_ids, top_level_counts, top_level_candidate_dists, top_level_farthest_dists);
+        
+        free(top_level_counts);
+        free(top_level_candidate_dists);
         
     } else {
         
@@ -617,15 +626,21 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
             num_points_to_expand = dci_query_single_point_single_level(dci_inst, dci_inst->indices[dci_inst->num_levels - 1], dci_inst->num_coarse_points, query_config.field_of_view, query, query_proj, query_config, NULL, points_to_expand, top_level_index_priority, top_level_left_pos, top_level_right_pos, top_level_cur_point_local_ids, top_level_cur_point_global_ids, top_level_counts, top_level_candidate_dists, top_level_farthest_dists);
         }
         
+        free(top_level_counts);
+        free(top_level_candidate_dists);
+        
         for (i = dci_inst->num_levels - 2; i >= dci_inst->num_levels - num_populated_levels + 1; i--) {
         
             #pragma omp parallel for
             for (j = 0; j < num_points_to_expand; j++) {
                 range mid_level_indices_range = dci_inst->next_level_ranges[i+1][points_to_expand[j].local_value];
-            
-                int mid_level_counts[dci_inst->num_comp_indices*mid_level_indices_range.num];
-                double mid_level_candidate_dists[mid_level_indices_range.num];
-            
+                
+                int *mid_level_counts;
+                mid_level_counts = (int *)malloc(sizeof(int)*dci_inst->num_comp_indices*mid_level_indices_range.num);
+                
+                double *mid_level_candidate_dists;
+                mid_level_candidate_dists = (double *)malloc(sizeof(double)*mid_level_indices_range.num);
+                
                 // Only used when non-blind querying is used
                 double mid_level_farthest_dists[dci_inst->num_comp_indices];
             
@@ -645,6 +660,9 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
                 } else {
                     num_top_candidates[j] = dci_query_single_point_single_level(dci_inst, &(dci_inst->indices[i][mid_level_indices_range.start*num_indices]), mid_level_indices_range.num, query_config.field_of_view, query, query_proj, query_config, NULL, &(points_to_expand_next[j*max_num_points_to_expand]), mid_level_index_priority, mid_level_left_pos, mid_level_right_pos, mid_level_cur_point_local_ids, mid_level_cur_point_global_ids, mid_level_counts, mid_level_candidate_dists, mid_level_farthest_dists);
                 }
+                
+                free(mid_level_counts);
+                free(mid_level_candidate_dists);
                 
                 for (m = 0; m < num_top_candidates[j]; m++) {
                     points_to_expand_next[j*max_num_points_to_expand+m].local_value += mid_level_indices_range.start;
@@ -705,8 +723,11 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
         for (j = 0; j < num_points_to_expand; j++) {
             range bottom_level_indices_range = dci_inst->next_level_ranges[dci_inst->num_levels - num_populated_levels + 1][points_to_expand[j].local_value];
             
-            int bottom_level_counts[dci_inst->num_comp_indices*bottom_level_indices_range.num];
-            double bottom_level_candidate_dists[bottom_level_indices_range.num];
+            int *bottom_level_counts;
+            bottom_level_counts = (int *)malloc(sizeof(int)*dci_inst->num_comp_indices*bottom_level_indices_range.num);
+            
+            double *bottom_level_candidate_dists;
+            bottom_level_candidate_dists = (double *)malloc(sizeof(double)*bottom_level_indices_range.num);
         
             // Only used when non-blind querying is used
             double bottom_level_farthest_dists[dci_inst->num_comp_indices];
@@ -723,6 +744,9 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
             int m;
             
             num_top_candidates[j] = dci_query_single_point_single_level(dci_inst, &(dci_inst->indices[dci_inst->num_levels - num_populated_levels][bottom_level_indices_range.start*num_indices]), bottom_level_indices_range.num, num_neighbours, query, query_proj, query_config, NULL, &(points_to_expand_next[j*num_neighbours]), bottom_level_index_priority, bottom_level_left_pos, bottom_level_right_pos, bottom_level_cur_point_local_ids, bottom_level_cur_point_global_ids, bottom_level_counts, bottom_level_candidate_dists, bottom_level_farthest_dists);
+            
+            free(bottom_level_counts);
+            free(bottom_level_candidate_dists);
             
             for (m = 0; m < num_top_candidates[j]; m++) {
                 points_to_expand_next[j*num_neighbours+m].local_value += bottom_level_indices_range.start;
@@ -758,6 +782,11 @@ static int dci_query_single_point(const dci* const dci_inst, int num_populated_l
     for (k = 0; k < num_points_to_expand; k++) {
         top_candidates[k] = points_to_expand_next[k];
     }
+    
+    free(num_top_candidates);
+    
+    free(points_to_expand);
+    free(points_to_expand_next);
     
     return num_points_to_expand;
     

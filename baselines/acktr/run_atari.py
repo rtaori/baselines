@@ -23,7 +23,7 @@ def main():
 
     for run_number in range(1, 6):
     	train(args.env, num_timesteps=args.num_timesteps, seed=args.seed, num_processes=8, envs_per_process=4, 
-                run_number=run_number, timestep_window=100000, n_neighbors=2000)
+                run_number=run_number, timestep_window=100000, n_neighbors=200)
     	tf.reset_default_graph()
 
 if __name__ == '__main__':
