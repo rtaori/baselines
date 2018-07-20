@@ -115,6 +115,8 @@ class CnnLinregPolicyVF(object):
         self.vf = vf
         self.step = step
         self.value = value
+        self.value_nn = value_nn
+        self.value_linreg = value_linreg
         self.fit_vf = fit_vf
         self.is_vf_fit = is_vf_fit
 
