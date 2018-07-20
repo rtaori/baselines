@@ -51,7 +51,7 @@ class Runner(object):
         last_values = self.model.value(self.obs, self.dones).tolist()
         last_values_nn = self.model.value_nn(self.obs, self.dones).tolist()
         last_values_linreg = self.model.value_linreg(self.obs, self.dones).tolist()
-        summed_rewards []
+        summed_rewards = []
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             dones = dones.tolist()
