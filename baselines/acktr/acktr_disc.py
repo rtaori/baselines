@@ -95,6 +95,7 @@ class Model(object):
         self.value = train_model.value
         self.value_nn = train_model.value_nn
         self.value_linreg = train_model.value_linreg
+        self.get_time_back = train_model.get_time_back
 
         tf.global_variables_initializer().run(session=sess)
 
@@ -130,6 +131,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     # SAVING MODELS
     avg_vals, avg_vals_discounted, est_vals_orig, est_vals_nn, est_vals_linreg = [], [], [], [], []
     timesteps = []
+    time_backs = []
 
     for update in range(total_timesteps//nbatch+1):
 
@@ -147,13 +149,14 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             mb_rewards = np.concatenate([mb_rewards, mb_rewards_])
             last_values = np.concatenate([last_values, last_values_])
             last_obs = np.concatenate([last_obs, last_obs_])
+        time_backs.append(model.get_time_back(obs, update))
 
         flag = False
         if model.train_model.is_vf_fit():
             flag = True
             policy_loss, value_loss, policy_entropy = model.train(obs, 
                 rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
-        model.train_model.fit_vf(obs, rewards.flatten())
+        model.train_model.fit_vf(obs, rewards.flatten(), update)
 
         model.old_obs = obs
         nseconds = time.time()-tstart
@@ -201,6 +204,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         # joblib.dump(last_values, save_path+'last_values-{}.pkl'.format(update*nbatch))
         # joblib.dump(last_obs, save_path+'last_obs-{}.pkl'.format(update*nbatch))
 
+        joblib.dump(time_backs, save_path+'time_backs.pkl')
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
         joblib.dump(est_vals_orig, save_path+'est_vals_orig.pkl')
