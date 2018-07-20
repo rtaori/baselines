@@ -203,14 +203,14 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
-        joblib.dump(est_val_orig, save_path+'est_val_orig.pkl')
+        joblib.dump(est_vals_orig, save_path+'est_vals_orig.pkl')
         joblib.dump(est_vals_nn, save_path+'est_vals_nn.pkl')
         joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
         joblib.dump(timesteps, save_path+'timesteps.pkl')
 
         # plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
         plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='red')
-        plt.plot(timesteps, est_val_orig, label='orig - est rewards', c='blue')
+        plt.plot(timesteps, est_vals_orig, label='orig - est rewards', c='blue')
         plt.plot(timesteps, est_vals_nn, label='nn - est rewards', c='green')
         plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='yellow')
         plt.title('Reward estimation for {}'.format(env_id))
