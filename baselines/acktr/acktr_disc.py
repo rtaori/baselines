@@ -153,6 +153,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         if model.train_model.is_vf_fit():
             time_backs.append(model.get_time_back(obs, update))
 
+        flag = False
         if model.train_model.is_vf_fit():
             flag = True
             policy_loss, value_loss, policy_entropy = model.train(obs, 
