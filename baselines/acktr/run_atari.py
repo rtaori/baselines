@@ -4,12 +4,12 @@ from baselines import logger
 from baselines.acktr.acktr_disc import learn
 from baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
-from baselines.ppo2.policies import CnnPolicy
+from baselines.acktr.atari_policy_vf import CnnLinregPolicyVF
 
 
 def train(env_id, num_timesteps, seed, num_processes, envs_per_process, run_number, timestep_window, n_neighbors):
     envs = [VecFrameStack(make_atari_env(env_id, num_processes, seed), 4) for _ in range(envs_per_process)]
-    policy_fn = CnnPolicy
+    policy_fn = CnnLinregPolicyVF
     learn(policy_fn, envs, env_id, seed, total_timesteps=int(num_timesteps * 1.1), num_processes=num_processes, 
             envs_per_process=envs_per_process, run_number=run_number, timestep_window=timestep_window, 
             n_neighbors=n_neighbors)
