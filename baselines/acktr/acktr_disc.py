@@ -1,4 +1,5 @@
 import os.path as osp
+import os
 import time
 import joblib
 import numpy as np
@@ -47,14 +48,14 @@ class Model(object):
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         pg_loss = pg_loss - ent_coef * entropy
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
-        train_loss = pg_loss # + vf_coef * vf_loss
+        train_loss = pg_loss + vf_coef * vf_loss
 
         ##Fisher loss construction
         self.pg_fisher = pg_fisher_loss = -tf.reduce_mean(logpac)
         sample_net = train_model.vf + tf.random_normal(tf.shape(train_model.vf))
         self.vf_fisher = vf_fisher_loss = - vf_fisher_coef*tf.reduce_mean(
                             tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
-        self.joint_fisher = joint_fisher_loss = pg_fisher_loss # + vf_fisher_loss
+        self.joint_fisher = joint_fisher_loss = pg_fisher_loss + vf_fisher_loss
 
         self.params=params = find_trainable_variables("model")
 
@@ -126,19 +127,21 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     enqueue_threads = model.q_runner.create_threads(model.sess, coord=coord, start=True)
 
     # SAVING MODELS
-    avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
+    avg_vals, avg_vals_discounted, est_vals_orig, est_vals_nn, est_vals_linreg = [], [], [], [], []
     timesteps = []
 
     for update in range(total_timesteps//nbatch+1):
 
-        obs, rewards, masks, actions, values, summed_rewards, mb_rewards, last_values, last_obs = runners[0].run()
+        obs, rewards, masks, actions, values, values_nn, values_linreg, summed_rewards, mb_rewards, last_values, last_obs = runners[0].run()
         for i in range(1, len(runners)):
-            obs_, rewards_, masks_, actions_, values_, summed_rewards_, mb_rewards_, last_values_, last_obs_ = runners[i].run()
+            obs_, rewards_, masks_, actions_, values_, values_nn_, values_linreg_, summed_rewards_, mb_rewards_, last_values_, last_obs_ = runners[i].run()
             obs = np.concatenate([obs, obs_])
             rewards = np.concatenate([rewards, rewards_])
             masks = np.concatenate([masks, masks_])
             actions = np.concatenate([actions, actions_])
             values = np.concatenate([values, values_])
+            values_nn = np.concatenate([values_nn, values_nn_])
+            values_linreg = np.concatenate([values_linreg, values_linreg_])
             summed_rewards.extend(summed_rewards_)
             mb_rewards = np.concatenate([mb_rewards, mb_rewards_])
             last_values = np.concatenate([last_values, last_values_])
@@ -168,13 +171,19 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         
         ## SAVING MODELS
         save_path = 'testing/{}/run{}/'.format(env_id, run_number)
-        model.save(save_path, update*nbatch)
-        final_activations = model.get_last_activations(obs)
-        joblib.dump(final_activations, save_path+'h-{}.pkl'.format(update*nbatch))
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        # if update % 50 == 0:
+        #     model.save(save_path, update*nbatch)
+        #     final_activations = model.get_last_activations(obs)
+        #     joblib.dump(final_activations, save_path+'h-{}.pkl'.format(update*nbatch))
 
         avg_val = np.mean(summed_rewards)
         avg_val_discounted = rewards[:, 0].mean()
-        est_val_linreg = values[:, 0].mean()
+        est_val_orig = values[:, 0].mean()
+        est_vals_nn = values_nn[:, 0].mean()
+        est_vals_linreg = values_linreg[:, 0].mean()
         avg_vals.append(avg_val)
         avg_vals_discounted.append(avg_val_discounted)
         est_vals_linreg.append(est_val_linreg)
@@ -191,12 +200,16 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
+        joblib.dump(est_val_orig, save_path+'est_val_orig.pkl')
+        joblib.dump(est_vals_nn, save_path+'est_vals_nn.pkl')
         joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
         joblib.dump(timesteps, save_path+'timesteps.pkl')
 
-        plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
-        plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='blue')
-        plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='blue', linestyle='dashed')
+        # plt.plot(timesteps, avg_vals, label='avg rewards', c='red')
+        plt.plot(timesteps, avg_vals_discounted, label='avg discounted rewards', c='red')
+        plt.plot(timesteps, est_val_orig, label='orig - est rewards', c='blue')
+        plt.plot(timesteps, est_vals_nn, label='nn - est rewards', c='green')
+        plt.plot(timesteps, est_vals_linreg, label='linreg - est rewards', c='yellow')
         plt.title('Reward estimation for {}'.format(env_id))
         plt.xlabel('Number of timesteps')
         plt.ylabel('Reward')

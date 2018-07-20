@@ -50,6 +50,7 @@ class CnnLinregPolicyVF(object):
         with tf.variable_scope("model"):
             h = nature_cnn(X)
             pi = fc(h, 'pi', nact, init_scale=0.01)
+            vf = fc(h, 'v', 1)[:,0]
 
         self.pdtype = make_pdtype(ac_space)
         self.pd = self.pdtype.pdfromflat(pi)
@@ -76,7 +77,7 @@ class CnnLinregPolicyVF(object):
         inv = tf.matrix_inverse(tf.matmul(Xt_linreg, X_linreg) + ridge)
         end = tf.matmul(Xt_linreg, tf.expand_dims(y_linreg, -1))
         weights = tf.squeeze(tf.matmul(inv, end), -1)
-        vf = tf.reduce_sum(h * weights, -1)
+        linreg_vf = tf.reduce_sum(h * weights, -1)
 
         def step(ob, *_args, **_kwargs):
             if not is_vf_fit():
@@ -87,6 +88,17 @@ class CnnLinregPolicyVF(object):
             if not is_vf_fit():
                 return np.random.rand(ob.shape[0])
             return sess.run(vf, {X:ob})
+
+        def value_nn(ob, *_args, **_kwargs):
+            if not is_vf_fit():
+                return np.random.rand(ob.shape[0])
+            y_nn = sess.run(y_linreg, {X:ob})
+            return y_nn.mean(axis=1)
+
+        def value_linreg(ob, *_args, **_kwargs):
+            if not is_vf_fit():
+                return np.random.rand(ob.shape[0])
+            return sess.run(linreg_vf, {X:ob})
 
         def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
@@ -118,8 +130,3 @@ class CnnLinregPolicyVF(object):
         self.save = save
 
         self.h = h
-
-        def get_last_activations(obs):
-            return sess.run(h, {X:obs})
-
-        self.get_last_activations = get_last_activations

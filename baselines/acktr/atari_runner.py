@@ -18,14 +18,18 @@ class Runner(object):
 
     def run(self):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [],[],[],[],[]
+        mb_nn_values, mb_linreg_values = [], []
         for n in range(self.nsteps):
             actions, values = self.model.step(self.obs, self.dones)
+            nn_values = self.model.value_nn(self.obs, self.dones)
+            linreg_values = self.model.value_linreg(self.obs, self.dones)
             mb_obs.append(np.copy(self.obs))
             mb_actions.append(actions)
             mb_values.append(values)
+            mb_nn_values.append(nn_values)
+            mb_linreg_values.append(linreg_values)
             mb_dones.append(self.dones)
             obs, rewards, dones, _ = self.env.step(actions)
-            # rewards = 500 * np.tanh(rewards / 500)
             self.dones = dones
             for n, done in enumerate(dones):
                 if done:
@@ -39,11 +43,15 @@ class Runner(object):
         mb_mb_rewards = mb_rewards.copy()
         mb_actions = np.asarray(mb_actions, dtype=np.int32).swapaxes(1, 0)
         mb_values = np.asarray(mb_values, dtype=np.float32).swapaxes(1, 0)
+        mb_nn_values = np.asarray(mb_nn_values, dtype=np.float32).swapaxes(1, 0)
+        mb_linreg_values = np.asarray(mb_linreg_values, dtype=np.float32).swapaxes(1, 0)
         mb_dones = np.asarray(mb_dones, dtype=np.bool).swapaxes(1, 0)
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
         last_values = self.model.value(self.obs, self.dones).tolist()
-        summed_rewards = []
+        last_values_nn = self.model.value_nn(self.obs, self.dones).tolist()
+        last_values_linreg = self.model.value_linreg(self.obs, self.dones).tolist()
+        summed_rewards []
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             dones = dones.tolist()
@@ -54,4 +62,4 @@ class Runner(object):
                 summed_rewards.append(rewards.sum())
                 rewards = discount_with_dones(rewards.tolist(), dones, self.gamma)
             mb_rewards[n] = rewards
-        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, summed_rewards, mb_mb_rewards, last_values, self.obs
+        return mb_obs, mb_rewards, mb_masks, mb_actions, mb_values, mb_nn_values, mb_linreg_values, summed_rewards, mb_mb_rewards, last_values, self.obs
