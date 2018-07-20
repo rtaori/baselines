@@ -93,7 +93,8 @@ class Model(object):
         self.train_model = train_model
         self.step = train_model.step
         self.value = train_model.value
-        self.get_last_activations = train_model.get_last_activations
+        self.value_nn = train_model.value_nn
+        self.value_linreg = train_model.value_linreg
 
         tf.global_variables_initializer().run(session=sess)
 
