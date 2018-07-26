@@ -149,10 +149,9 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             mb_rewards = np.concatenate([mb_rewards, mb_rewards_])
             last_values = np.concatenate([last_values, last_values_])
             last_obs = np.concatenate([last_obs, last_obs_])
+        time_backs.append(model.get_time_back(obs, update))
 
-        if model.train_model.is_vf_fit():
-            time_backs.append(model.get_time_back(obs, update))
-
+        flag = False
         if model.train_model.is_vf_fit():
             flag = True
             policy_loss, value_loss, policy_entropy = model.train(obs, 

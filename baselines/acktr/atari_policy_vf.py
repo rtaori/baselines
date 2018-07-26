@@ -103,7 +103,7 @@ class CnnLinregPolicyVF(object):
 
         def get_time_back(obs, iteration):
             x_nn = sess.run(X_linreg, {X:obs})
-            dates = [self.hash_store[hash(str(x_nn_i))] for x_nn_i in x_nn]
+            dates = [self.hash_store[hash(x_nn_i)] for x_nn_i in x_nn]
             time_back = iteration - np.mean(dates)
             return time_back
 
@@ -112,7 +112,7 @@ class CnnLinregPolicyVF(object):
         def fit_vf(ob, y, iteration):
             hhat = sess.run(h, {X:ob})
             for hhat_i in hhat:
-                self.hash_store[hash(str(hhat_i))] = iteration
+                self.hash_store[hash(hhat_i)] = iteration
 
             self.X_db.add(hhat)
             self.y_db.add(y)
