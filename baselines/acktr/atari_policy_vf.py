@@ -109,7 +109,7 @@ class CnnLinregPolicyVF(object):
             self.X_backup_db.add(hhat)
             self.y_backup_db.add(hhat)
 
-            if self.X_backup_db.size() >= self.timestep_window / 2 or self.X_db.size <= self.timestep_window / 2:
+            if self.X_backup_db.size() >= self.timestep_window / 2 or self.X_db.size() <= self.timestep_window / 2:
                 self.X_db.add(self.X_backup_db.view())
                 self.y_db.add(self.y_backup_db.view())
 
