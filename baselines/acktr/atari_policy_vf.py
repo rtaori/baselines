@@ -32,7 +32,6 @@ class CnnLinregPolicyVF(object):
         self.n_neighbors = n_neighbors
         self.X_db = NumpyDeque(max_capacity=timestep_window)
         self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
-        self.hash_store = {}
 
         # prioritized DCI
         self.num_comp_indices = 2
@@ -101,18 +100,8 @@ class CnnLinregPolicyVF(object):
                 return np.random.rand(ob.shape[0])
             return sess.run(linreg_vf, {X:ob})
 
-        def get_time_back(obs, iteration):
-            x_nn = sess.run(X_linreg, {X:obs})
-            dates = [self.hash_store[hash(x_nn_i)] for x_nn_i in x_nn]
-            time_back = iteration - np.mean(dates)
-            return time_back
-
-        self.get_time_back = get_time_back
-
-        def fit_vf(ob, y, iteration):
+        def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
-            for hhat_i in hhat:
-                self.hash_store[hash(hhat_i)] = iteration
 
             self.X_db.add(hhat)
             self.y_db.add(y)
