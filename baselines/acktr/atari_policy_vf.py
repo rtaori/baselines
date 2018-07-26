@@ -29,9 +29,12 @@ class CnnLinregPolicyVF(object):
         ob_shape = (None, nh, nw, nc)
         nact = ac_space.n
 
+        self.timestep_window = timestep_window
         self.n_neighbors = n_neighbors
         self.X_db = NumpyDeque(max_capacity=timestep_window)
         self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
+        self.X_backup_db = NumpyDeque(max_capacity=timestep_window)
+        self.y_backup_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
 
         # prioritized DCI
         self.num_comp_indices = 2
@@ -103,8 +106,13 @@ class CnnLinregPolicyVF(object):
         def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
 
-            self.X_db.add(hhat)
-            self.y_db.add(y)
+            self.X_backup_db.add(hhat)
+            self.y_backup_db.add(hhat)
+            if self.X_backup_db.size() >= self.timestep_window / 2:
+                self.X_db.add(self.X_backup_db.view())
+                self.y_db.add(self.y_backup_db.view())
+                self.X_backup_db = NumpyDeque(max_capacity=timestep_window)
+                self.y_backup_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
 
             self.dci = DCI(self.dim, self.num_comp_indices, self.num_simp_indices)
             self.dci.add(self.X_db.view(), num_levels=self.num_levels, 
