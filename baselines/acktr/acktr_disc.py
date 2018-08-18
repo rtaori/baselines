@@ -21,6 +21,8 @@ class Model(object):
                 envs_per_process=2, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, lrschedule='linear', timestep_window=None, n_neighbors=None):
+        # change multiprocessing to only use set number of processes
+        # since we don't have 32 cpu cores to simultaneously run rollouts on lol
         config = tf.ConfigProto(allow_soft_placement=True,
                                 intra_op_parallelism_threads=1,
                                 inter_op_parallelism_threads=num_processes)
@@ -34,6 +36,7 @@ class Model(object):
         PG_LR = tf.placeholder(tf.float32, [])
         VF_LR = tf.placeholder(tf.float32, [])
 
+        # make sure to set the vf loss as 0 as we can't backprop
         vf_coef = 0.0
 
         self.model2 = train_model = policy_and_vf(sess, ob_space, ac_space, 
@@ -119,6 +122,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             fh.write(cloudpickle.dumps(make_model))
     model = make_model()
 
+    # batch all the envs into batches of how many processes can be run at a time
     runners = [Runner(env, model, nsteps=nsteps, gamma=gamma) for env in envs]
     nbatch = nenvs*nsteps
     tstart = time.time()
@@ -131,6 +135,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
 
     for update in range(total_timesteps//nbatch+1):
 
+        # get more diagnostic information from the rollout engine
         obs, rewards, masks, actions, values, summed_rewards, mb_rewards, last_values, last_obs = runners[0].run()
         for i in range(1, len(runners)):
             obs_, rewards_, masks_, actions_, values_, summed_rewards_, mb_rewards_, last_values_, last_obs_ = runners[i].run()
@@ -144,6 +149,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             last_values = np.concatenate([last_values, last_values_])
             last_obs = np.concatenate([last_obs, last_obs_])
 
+        # this is to help the logging know whether to log losses/entropy 
+        # since if the database doesn't have enough points, it returns random predictions
         flag = False
         if model.train_model.is_vf_fit():
             flag = True
@@ -167,6 +174,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             logger.dump_tabular()
         
         ## SAVING MODELS
+        # saves important model and reward information and also makes a plot
         save_path = 'testing/{}/run{}/'.format(env_id, run_number)
         model.save(save_path, update*nbatch)
         final_activations = model.get_last_activations(obs)

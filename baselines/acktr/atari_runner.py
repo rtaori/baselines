@@ -1,6 +1,7 @@
 import numpy as np
 from baselines.a2c.utils import discount_with_dones
 
+# custom runner for atari envs that can also provide extra information
 class Runner(object):
 
     def __init__(self, env, model, nsteps, gamma=0.99):
@@ -25,7 +26,6 @@ class Runner(object):
             mb_values.append(values)
             mb_dones.append(self.dones)
             obs, rewards, dones, _ = self.env.step(actions)
-            # rewards = 500 * np.tanh(rewards / 500)
             self.dones = dones
             for n, done in enumerate(dones):
                 if done:
@@ -42,7 +42,7 @@ class Runner(object):
         mb_dones = np.asarray(mb_dones, dtype=np.bool).swapaxes(1, 0)
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
-        last_values = self.model.value(self.obs, self.dones).tolist()
+        last_values = self.model.value(self.obs, self.dones).tolist() # final predictions of our network
         summed_rewards = []
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):

@@ -9,6 +9,7 @@ from dci import DCI
 import os
 from baselines.acktr.numpy_deque import NumpyDeque
 
+# shared parameters for both policy and value functions
 def nature_cnn(unscaled_images):
     """
     CNN from Nature paper.
@@ -21,6 +22,8 @@ def nature_cnn(unscaled_images):
     h3 = conv_to_fc(h3)
     return activ(fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2)))
 
+# custom object that will do the linear regression in one graph
+# with the rest of the computation
 class CnnLinregPolicyVF(object):
 
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, 
@@ -29,11 +32,12 @@ class CnnLinregPolicyVF(object):
         ob_shape = (None, nh, nw, nc)
         nact = ac_space.n
 
+        # storage databases
         self.n_neighbors = n_neighbors
         self.X_db = NumpyDeque(max_capacity=timestep_window)
         self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
 
-        # prioritized DCI
+        # prioritized DCI parameters
         self.num_comp_indices = 2
         self.num_simp_indices = 7
         self.num_levels = 2
@@ -59,6 +63,8 @@ class CnnLinregPolicyVF(object):
         def is_vf_fit():
             return self.X_db.size() >= self.n_neighbors
 
+        # pyfunc that can be inserted in a computational graph
+        # needed since the dci query targets are only available partway through the graph
         def get_nearest_neighbors(h):
             nn_idx, _ = self.dci.query(h, num_neighbours=self.n_neighbors, field_of_view=self.query_field_of_view,
                                         prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
@@ -72,6 +78,7 @@ class CnnLinregPolicyVF(object):
         X_linreg, y_linreg = tf.py_func(get_nearest_neighbors, [h], [tf.float32, tf.float32])
         ridge = tf.eye(self.dim) * 1e-2
 
+        # actual graph for linear regression
         Xt_linreg = tf.transpose(X_linreg, [0, 2, 1])
         inv = tf.matrix_inverse(tf.matmul(Xt_linreg, X_linreg) + ridge)
         end = tf.matmul(Xt_linreg, tf.expand_dims(y_linreg, -1))
@@ -88,6 +95,7 @@ class CnnLinregPolicyVF(object):
                 return np.random.rand(ob.shape[0])
             return sess.run(vf, {X:ob})
 
+        # add points to database and update the DCI
         def fit_vf(ob, y):
             hhat = sess.run(h, {X:ob})
 
