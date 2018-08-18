@@ -20,6 +20,7 @@ def rollout(env, policy, max_pathlength, animate=False, obfilter=None):
     Simulate the env and policy for max_pathlength steps
     """
     ob = env.reset()
+    # before it was zeroed out, but that creates singular matrix (bad for linear regression)
     prev_ob = ob
     if obfilter: ob = obfilter(ob)
     terminated = False
@@ -73,6 +74,7 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
     # start queue runners
     enqueue_threads = []
     coord = tf.train.Coordinator()
+    # remove this since the vf doesn't need to be optimized via GD
     # for qr in [q_runner, vf.q_runner]:
     for qr in [q_runner]:
         assert (qr != None)
@@ -129,6 +131,8 @@ def learn(env, policy, vf, gamma, lam, timesteps_per_batch, num_timesteps,
         do_update(ob_no, action_na, standardized_adv_n)
 
         ## SAVING MODELS
+        # Basically saves the models and some other diagnostic info
+        # Also creates a plot of the progress so you can easily visualize what's going on
         if i % 3 == 0:
             avg_val, avg_val_discounted, est_val_linreg = 0, 0, 0
             for _ in range(5):

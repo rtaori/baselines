@@ -16,6 +16,8 @@ def train(env_id, num_timesteps, seed, run_number):
         ac_dim = env.action_space.shape[0]
         with tf.variable_scope("vf"):
             # vf = NeuralNetValueFunction(ob_dim, ac_dim)
+            # This is the custom critic (value function) based on the nearest neighbor
+            # density estimate with linear regression
             vf = LinRegVF(n_neighbors=200, timestep_window=100000, ob_dim=ob_dim, ac_dim=ac_dim)
         with tf.variable_scope("pi"):
             policy = GaussianMlpPolicy(ob_dim, ac_dim)

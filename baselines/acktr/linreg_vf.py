@@ -7,6 +7,7 @@ import tensorflow as tf
 import time
 from baselines.acktr.numpy_deque import NumpyDeque
 
+# This is the class that handles density-based critic for mujoco envs
 class LinRegVF(object):
 
     def __init__(self, n_neighbors, timestep_window, ob_dim, ac_dim):
@@ -16,7 +17,7 @@ class LinRegVF(object):
         self.X_db = NumpyDeque(max_capacity=timestep_window)
         self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
 
-        # prioritized DCI
+        # prioritized DCI parameters
         self.num_comp_indices = 2
         self.num_simp_indices = 7
         self.num_levels = 2
@@ -31,6 +32,7 @@ class LinRegVF(object):
         self.X_query_linreg = tf.placeholder(tf.float32, shape=[None, self.dim])
         self.ridge = tf.eye(self.dim) * 1e-2
 
+        # actual graph for linear regression
         Xt_linreg = tf.transpose(self.X_linreg, [0, 2, 1])
         self.inv = tf.matrix_inverse(tf.matmul(Xt_linreg, self.X_linreg) + self.ridge)
         end = tf.matmul(Xt_linreg, tf.expand_dims(self.y_linreg, -1))
@@ -44,13 +46,16 @@ class LinRegVF(object):
         X = np.concatenate([path['observation'], act, al], axis=1)
         return X
 
+    # call this function to get predictions
     def predict(self, path):
         X_query = self._preproc(path)
         if not self.is_fit():
             return np.random.rand(X_query.shape[0])
         return self._predict_linreg(X_query)
 
+    # this specifically uses linreg to do the prediction
     def _predict_linreg(self, X_query):
+        # query from the DCI
         nn_idx, _ = self.dci.query(X_query, num_neighbours=self.n_neighbors, 
             field_of_view=self.query_field_of_view, prop_to_retrieve=self.query_prop_to_retrieve, blind=True)
 
@@ -62,6 +67,7 @@ class LinRegVF(object):
 
         return y_pred
 
+    # updates the database and reconstructs DCI
     def fit(self, paths, targvals):
         X = np.concatenate([self._preproc(p) for p in paths])
         y = np.concatenate(targvals)

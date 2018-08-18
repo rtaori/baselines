@@ -1,5 +1,7 @@
 import numpy as np 
 
+# makes sure that it only stores most recent last max_capacity number 
+# of datapoints (new additions override the old ones)
 class NumpyDeque(object):
 
 	def __init__(self, max_capacity, one_dimensional=False):
