@@ -36,8 +36,9 @@ class CnnLinregPolicyVF(object):
         self.n_neighbors = n_neighbors
         self.X_db = NumpyDeque(max_capacity=timestep_window)
         self.y_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
-
-        # prioritized DCI parameters
+        self.time_db = NumpyDeque(max_capacity=timestep_window, one_dimensional=True)
+    
+        # prioritized DCI
         self.num_comp_indices = 2
         self.num_simp_indices = 7
         self.num_levels = 2
@@ -72,10 +73,10 @@ class CnnLinregPolicyVF(object):
             nn_idx = np.array(nn_idx)
             X_linreg, y_linreg = self.X_db.view()[nn_idx], self.y_db.view()[nn_idx]
 
-            return X_linreg.astype(np.float32), y_linreg.astype(np.float32)
+            return X_linreg.astype(np.float32), y_linreg.astype(np.float32), nn_idx
 
         # define the graph for linear regression
-        X_linreg, y_linreg = tf.py_func(get_nearest_neighbors, [h], [tf.float32, tf.float32])
+        X_linreg, y_linreg, nn_idx = tf.py_func(get_nearest_neighbors, [h], [tf.float32, tf.float32, tf.int32])
         ridge = tf.eye(self.dim) * 1e-2
 
         # actual graph for linear regression
@@ -95,12 +96,20 @@ class CnnLinregPolicyVF(object):
                 return np.random.rand(ob.shape[0])
             return sess.run(vf, {X:ob})
 
-        # add points to database and update the DCI
-        def fit_vf(ob, y):
+        def get_time_back(obs, iteration):
+            idx_nn = sess.run(nn_idx, {X:obs})
+            dates = self.time_db.view()[idx_nn]
+            time_back = iteration - np.mean(dates)
+            return time_back
+        
+        self.get_time_back = get_time_back
+
+        def fit_vf(ob, y, iteration):
             hhat = sess.run(h, {X:ob})
 
             self.X_db.add(hhat)
             self.y_db.add(y)
+            self.time_db.add(np.ones(y.size) * iteration)
 
             self.dci = DCI(self.dim, self.num_comp_indices, self.num_simp_indices)
             self.dci.add(self.X_db.view(), num_levels=self.num_levels, 

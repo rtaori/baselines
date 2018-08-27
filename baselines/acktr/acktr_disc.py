@@ -96,7 +96,8 @@ class Model(object):
         self.step = train_model.step
         self.value = train_model.value
         self.get_last_activations = train_model.get_last_activations
-
+        self.get_time_back = train_model.get_time_back
+        
         tf.global_variables_initializer().run(session=sess)
 
 def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, 
@@ -132,6 +133,7 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
     # SAVING MODELS
     avg_vals, avg_vals_discounted, est_vals_linreg = [], [], []
     timesteps = []
+    time_backs = []
 
     for update in range(total_timesteps//nbatch+1):
 
@@ -156,7 +158,8 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
             flag = True
             policy_loss, value_loss, policy_entropy = model.train(obs, 
                 rewards.flatten(), masks.flatten(), actions.flatten(), values.flatten())
-        model.train_model.fit_vf(obs, rewards.flatten())
+            time_backs.append(model.get_time_back(obs, update))
+        model.train_model.fit_vf(obs, rewards.flatten(), update)
 
         model.old_obs = obs
         nseconds = time.time()-tstart
@@ -188,15 +191,16 @@ def learn(policy_and_vf, envs, env_id, seed, total_timesteps=int(40e6), gamma=0.
         est_vals_linreg.append(est_val_linreg)
         timesteps.append(update*nbatch)
 
-        joblib.dump(obs, save_path+'obs-{}.pkl'.format(update*nbatch))
-        joblib.dump(rewards, save_path+'rewards-{}.pkl'.format(update*nbatch))
-        joblib.dump(actions, save_path+'actions-{}.pkl'.format(update*nbatch))
-        joblib.dump(values, save_path+'values-{}.pkl'.format(update*nbatch))
-        joblib.dump(summed_rewards, save_path+'summed_rewards-{}.pkl'.format(update*nbatch))
-        joblib.dump(mb_rewards, save_path+'mb_rewards-{}.pkl'.format(update*nbatch))
-        joblib.dump(last_values, save_path+'last_values-{}.pkl'.format(update*nbatch))
-        joblib.dump(last_obs, save_path+'last_obs-{}.pkl'.format(update*nbatch))
+        # joblib.dump(obs, save_path+'obs-{}.pkl'.format(update*nbatch))
+        # joblib.dump(rewards, save_path+'rewards-{}.pkl'.format(update*nbatch))
+        # joblib.dump(actions, save_path+'actions-{}.pkl'.format(update*nbatch))
+        # joblib.dump(values, save_path+'values-{}.pkl'.format(update*nbatch))
+        # joblib.dump(summed_rewards, save_path+'summed_rewards-{}.pkl'.format(update*nbatch))
+        # joblib.dump(mb_rewards, save_path+'mb_rewards-{}.pkl'.format(update*nbatch))
+        # joblib.dump(last_values, save_path+'last_values-{}.pkl'.format(update*nbatch))
+        # joblib.dump(last_obs, save_path+'last_obs-{}.pkl'.format(update*nbatch))
 
+        joblib.dump(time_backs, save_path+'time_backs.pkl')
         joblib.dump(avg_vals, save_path+'avg_vals.pkl')
         joblib.dump(avg_vals_discounted, save_path+'avg_vals_discounted.pkl')
         joblib.dump(est_vals_linreg, save_path+'est_vals_linreg.pkl')
